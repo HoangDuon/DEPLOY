@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Manager Dashboard - LMS</title>
+    <link rel="stylesheet" href="/app/static/css/dashboard.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+    <div class="dashboard-container">
+        <div id="sidebar-placeholder"></div>
+
+        <main class="main-content">
+            <div id="header-placeholder"></div>
+
+            <div class="content-area">
+                <section id="dashboard" class="content-section active">
+                    <h2>Bảng điều khiển tổng quan</h2>
+                    <div class="card-container">
+                        <div class="card"><i class="fas fa-user-friends"></i><h3>150</h3><p>Học viên</p></div>
+                        <div class="card"><i class="fas fa-chalkboard"></i><h3>25</h3><p>Lớp học</p></div>
+                        <div class="card"><i class="fas fa-user-tie"></i><h3>15</h3><p>Giáo viên</p></div>
+                        <div class="card"><i class="fas fa-ticket-alt"></i><h3>8</h3><p>Ticket</p></div>
+                    </div>
+                </section>
+                <section id="user-management" class="content-section">
+                    <div class="page-header">
+                        <h2>Quản lý người dùng</h2>
+                        <div class="header-actions">
+                            <input type="text" id="user-search-input" class="form-control" placeholder="Tìm kiếm theo tên hoặc email...">
+                            <button id="add-user-btn" class="btn btn-primary"><i class="fas fa-plus"></i> Thêm người dùng</button>
+                        </div>
+                    </div>
+                
+                    <div class="table-container">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>ID</th>
+                                    <th>Họ tên</th>
+                                    <th>Email</th>
+                                    <th>Vai trò</th>
+                                    <th>Trạng thái</th>
+                                    <th>Hành động</th>
+                                </tr>
+                            </thead>
+                            <tbody id="users-table-body">
+                                </tbody>
+                        </table>
+                    </div>
+                </section>
+
+                <!-- ====================== MODAL TẠO/SỬA USER ====================== -->
+
+                <div id="user-modal-overlay" class="modal-overlay hidden">
+                    <div class="modal">
+                        <div class="modal-header">
+                            <h3 id="user-modal-title">Thêm người dùng mới</h3>
+                            <span id="close-user-modal-btn" class="close-modal">&times;</span>
+                        </div>
+                        <div class="modal-body">
+                            <form id="user-form">
+                                <input type="hidden" id="user-id" name="id">
+                                <div class="form-group">
+                                    <label for="user-fullname">Họ và tên</label>
+                                    <input type="text" id="user-fullname" name="name" class="form-control" required>
+                                </div>
+                                <div class="form-group">
+                                    <label for="user-email">Email</label>
+                                    <input type="email" id="user-email" name="email" class="form-control" required>
+                                </div>
+                                <div class="form-group">
+                                    <label for="user-role">Vai trò</label>
+                                    <select id="user-role" name="role" class="form-control">
+                                        <option value="lec">Giảng viên (LEC)</option>
+                                        <option value="tc">Tư vấn (TC)</option>
+                                        <option value="cs">Chăm sóc học viên (CS)</option>
+                                        <option value="manager">Quản lý (Manager)</option>
+                                    </select>
+                                </div>
+                                 <div class="form-group">
+                                    <label for="user-password">Mật khẩu</label>
+                                    <input type="password" id="user-password" name="password" class="form-control" placeholder="Để trống nếu không muốn thay đổi">
+                                </div>
+                            </form>
+                        </div>
+                        <div class="modal-footer">
+                            <button id="cancel-user-modal-btn" class="btn btn-secondary">Hủy</button>
+                            <button id="save-user-btn" type="submit" form="user-form" class="btn btn-primary">Lưu thay đổi</button>
+                        </div>
+                    </div>
+                </div>
+                <!-- ====================== END MODAL TẠO/SỬA USER ====================== -->
+                
+                <!-- ====================== Quan ly Ticket ====================== -->
+                <section id="ticket-management" class="content-section">
+                    <h2>Quản lý Ticket</h2>
+                    
+                    <div class="page-header" style="margin-bottom: 20px;">
+                        <div class="header-actions">
+                            <select id="ticket-filter-status" class="form-control" style="width: 200px;">
+                                <option value="all">Tất cả trạng thái</option>
+                                <option value="pending" selected>Chờ xử lý</option>
+                                <option value="in_progress">Đang xử lý</option>
+                                <option value="resolved">Đã giải quyết</option>
+                            </select>
+                            <select id="ticket-filter-type" class="form-control" style="width: 200px;">
+                                <option value="all">Tất cả loại</option>
+                                <option value="hoc_tap">Vấn đề Học tập</option>
+                                <option value="hoc_phi">Vấn đề Học phí</option>
+                                <option value="ky_thuat">Vấn đề Kỹ thuật</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="table-container">
+                        <h3>Danh sách Ticket</h3>
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Mã Ticket</th>
+                                    <th>Loại</th>
+                                    <th>Tiêu đề</th>
+                                    <th>Người gửi</th>
+                                    <th>CS phụ trách</th>
+                                    <th>Trạng thái</th>
+                                    <th>Ngày tạo</th>
+                                    <th>Hành động</th>
+                                </tr>
+                            </thead>
+                            <tbody id="manager-ticket-table-body">
+                            </tbody>
+                        </table>
+                    </div>
+                </section>
+                <!-- ====================== END Quan ly Ticket ====================== -->
+
+
+                <!-- ====================== Notification  =========================== -->
+                <section id="announcements" class="content-section">
+                    <h2>Thông báo</h2>
+                    
+                    <div class="form-box card" style="margin-bottom: 30px;">
+                         <h3>Soạn thông báo mới</h3>
+                        <form id="announcement-form">
+                            <div class="form-group">
+                                <label for="announcement-title">Tiêu đề</label>
+                                <input type="text" id="announcement-title" class="form-control" required placeholder="Nhập tiêu đề thông báo...">
+                            </div>
+                            <div class="form-group">
+                                <label for="announcement-content">Nội dung</label>
+                                <textarea id="announcement-content" rows="5" class="form-control" required placeholder="Nhập nội dung chi tiết..."></textarea>
+                            </div>
+                            <div class="form-group">
+                                <label for="announcement-recipients">Người nhận</label>
+                                <select id="announcement-recipients" class="form-control">
+                                    <option value="all">Tất cả người dùng</option>
+                                    <option value="lec">Giảng viên (LEC)</option>
+                                    <option value="tc">Tư vấn (TC)</option>
+                                    <option value="cs">Chăm sóc học viên (CS)</option>
+                                </select>
+                            </div>
+                            <div class="form-footer" style="padding-top: 15px; border-top: 1px solid #e2e8f0;">
+                                <button id="submit-announcement-btn" type="submit" class="btn btn-primary">
+                                    Gửi thông báo
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+
+                    <div class="table-container">
+                        <h3>Lịch sử thông báo đã gửi</h3>
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>ID</th>
+                                    <th>Tiêu đề</th>
+                                    <th>Người nhận</th>
+                                    <th>Người gửi</th>
+                                    <th>Ngày gửi</th>
+                                    <th>Hành động</th>
+                                </tr>
+                            </thead>
+                            <tbody id="announcements-table-body">
+                            </tbody>
+                        </table>
+                    </div>
+                </section>
+                <!-- ====================== END Notification ====================== -->
+
+                <!-- ====================== Report ====================== -->
+                <section id="reports" class="content-section">
+                    <div class="page-header">
+                        <h2>Báo cáo và Thống kê</h2>
+                    </div>
+                    <div class="card report-options-card">
+                        <div class="form-grid">
+                            <div class="form-group">
+                                <label for="report-type">Loại báo cáo</label>
+                                <select id="report-type" class="form-control">
+                                    <option value="overview">Báo cáo tổng quan</option>
+                                    <option value="class_performance">Hiệu suất lớp học</option>
+                                    <option value="student_progress">Tiến độ học viên</option>
+                                    <option value="teacher_activity">Hoạt động giáo viên</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label for="date-range">Khoảng thời gian</label>
+                                <select id="date-range" class="form-control">
+                                    <option value="last_7_days">7 ngày qua</option>
+                                    <option value="last_30_days" selected>30 ngày qua</option>
+                                    <option value="this-month">Tháng này</option>
+                                    <option value="last-month">Tháng trước</option>
+                                    <option value="all-time">Toàn bộ thời gian</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="form-footer">
+                            <button id="generate-report-btn" class="btn btn-primary">
+                                <span>Tạo báo cáo</span>
+                            </button>
+                        </div>
+                    </div>
+                
+                    <div id="report-results-container" class="hidden">
+                        <h3>Kết quả báo cáo tổng quan</h3>
+                        <div class="card-container">
+                            <div class="card">
+                                <i class="fas fa-user-plus"></i>
+                                <h3 id="report-new-students">12</h3>
+                                <p>Học viên mới</p>
+                            </div>
+                            <div class="card">
+                                <i class="fas fa-chalkboard"></i>
+                                <h3 id="report-new-classes">2</h3>
+                                <p>Lớp học mới</p>
+                            </div>
+                            <div class="card">
+                                <i class="fas fa-check-circle"></i>
+                                <h3 id="report-attendance-rate">92%</h3>
+                                <p>Tỷ lệ chuyên cần</p>
+                            </div>
+                            <div class="card">
+                                <i class="fas fa-ticket-alt"></i>
+                                <h3 id="report-resolved-tickets">28</h3>
+                                <p>Ticket đã giải quyết</p>
+                            </div>
+                        </div>
+
+                        <div class="chart-container">
+                                <canvas id="report-chart"></canvas>
+                        </div>
+                    </div>
+                </section>
+                
+                <!-- ====================== MODAL XEM CHI TIẾT TICKET ====================== -->
+                <div id="ticket-detail-modal-overlay" class="modal-overlay hidden">
+                    <div class="modal" style="max-width: 700px;">
+                        <div class="modal-header">
+                            <h3 id="ticket-detail-modal-title">Chi tiết Ticket #<span id="detail-ticket-id"></span></h3>
+                            <span id="close-ticket-detail-modal-btn" class="close-modal">&times;</span>
+                        </div>
+                        <div class="modal-body">
+                             <div class="form-group">
+                                <label>Tiêu đề:</label>
+                                <p id="detail-ticket-title" class="form-control" style="background-color: #f9fafb;"></p>
+                            </div>
+                            <div class="form-grid" style="grid-template-columns: 1fr 1fr; gap: 20px;">
+                                <div class="form-group">
+                                    <label>Loại Ticket:</label>
+                                    <p id="detail-ticket-type" class="form-control" style="background-color: #f9fafb;"></p>
+                                </div>
+                                <div class="form-group">
+                                    <label>Trạng thái:</label>
+                                    <p id="detail-ticket-status" class="form-control" style="background-color: #f9fafb;"></p>
+                                </div>
+                                <div class="form-group">
+                                    <label>Người gửi (HV):</label>
+                                    <p id="detail-ticket-sender" class="form-control" style="background-color: #f9fafb;"></p>
+                                </div>
+                                <div class="form-group">
+                                    <label>CS phụ trách:</label>
+                                    <p id="detail-ticket-cs" class="form-control" style="background-color: #f9fafb;"></p>
+                                </div>
+                            </div>
+                            <div class="form-group" style="margin-top: 20px;">
+                                <label>Nội dung chi tiết:</label>
+                                <textarea id="detail-ticket-description" class="form-control" rows="5" readonly style="resize: none; background-color: #f9fafb;"></textarea>
+                            </div>
+                            <div class="form-group">
+                                <label for="manager-resolution">Phản hồi của Manager (Giải quyết):</label>
+                                <textarea id="manager-resolution" class="form-control" rows="3" placeholder="Nhập tóm tắt giải quyết vấn đề..."></textarea>
+                            </div>
+                        </div>
+                        <div class="modal-footer">
+                            <button id="resolve-ticket-btn" class="btn btn-primary"><i class="fas fa-check-circle"></i> Giải quyết Ticket</button>
+                            <button id="close-ticket-btn" class="btn btn-secondary">Đóng</button>
+                        </div>
+                    </div>
+                </div>
+                <!-- ====================== END MODAL CHI TIẾT TICKET ====================== -->
+            </div>
+        </main>
+    </div>
+
+    <script src="/app/static/js/common.js"></script>
+    <script src="/app/static/js/manager.js"></script>
+</body>
+</html>
