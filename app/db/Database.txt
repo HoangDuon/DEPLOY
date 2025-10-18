@@ -1,1 +1,211 @@
-File này chứa code SQL
+-- ============================================
+--  DATABASE: Internal LMS (Normalized + Compatible)
+--  Notes:
+--   ✅ utf8mb4_unicode_ci for all
+--   ✅ Fixed foreign key order & ENUM
+--   ✅ Ready for FastAPI + SQLAlchemy
+-- ============================================
+
+DROP DATABASE IF EXISTS lms_db;
+CREATE DATABASE lms_db
+  CHARACTER SET utf8mb4
+  COLLATE utf8mb4_unicode_ci;
+
+USE lms_db;
+
+-- ==========================
+-- 1️⃣ ROLES
+-- ==========================
+CREATE TABLE ROLES (
+    role_id INT AUTO_INCREMENT PRIMARY KEY,
+    role_name VARCHAR(50) NOT NULL UNIQUE,
+    description VARCHAR(255),
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ==========================
+-- 2️⃣ USERS
+-- ==========================
+CREATE TABLE USERS (
+    user_id INT AUTO_INCREMENT PRIMARY KEY,
+    name VARCHAR(100) NOT NULL,
+    email VARCHAR(100) NOT NULL UNIQUE,
+    password_hash VARCHAR(255) NOT NULL,
+    role_id INT NOT NULL,
+    status ENUM('active', 'deactivated') NOT NULL DEFAULT 'active',
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (role_id) REFERENCES ROLES(role_id)
+        ON UPDATE CASCADE ON DELETE RESTRICT
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ==========================
+-- 3️⃣ STUDENTS
+-- ==========================
+CREATE TABLE STUDENTS (
+    student_id INT AUTO_INCREMENT PRIMARY KEY,
+    enrollment_date DATE NOT NULL,
+    status ENUM('active', 'inactive') NOT NULL DEFAULT 'active'
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ==========================
+-- 4️⃣ LECTURERS\
+-- ==========================
+CREATE TABLE LECTURERS (
+    lecturer_id INT AUTO_INCREMENT PRIMARY KEY,
+    user_id INT NOT NULL UNIQUE,
+    department VARCHAR(100),
+    total_hours INT DEFAULT 0,
+    FOREIGN KEY (user_id) REFERENCES USERS(user_id)
+        ON UPDATE CASCADE ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ==========================
+-- 5️⃣ CLASSES
+-- ==========================
+CREATE TABLE CLASSES (
+    class_id INT AUTO_INCREMENT PRIMARY KEY,
+    class_name VARCHAR(100) NOT NULL,
+    lecturer_id INT NOT NULL,
+    schedule VARCHAR(100) NOT NULL,
+    created_by INT NOT NULL,
+    status ENUM('active', 'archived') NOT NULL DEFAULT 'active',
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (lecturer_id) REFERENCES LECTURERS(lecturer_id)
+        ON UPDATE CASCADE ON DELETE RESTRICT,
+    FOREIGN KEY (created_by) REFERENCES USERS(user_id)
+        ON UPDATE CASCADE ON DELETE RESTRICT
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ==========================
+-- 6️⃣ CLASS_ASSIGNMENTS
+-- ==========================
+CREATE TABLE CLASS_ASSIGNMENTS (
+    assignment_id INT AUTO_INCREMENT PRIMARY KEY,
+    class_id INT NOT NULL,
+    student_id INT NOT NULL,
+    UNIQUE (class_id, student_id),
+    FOREIGN KEY (class_id) REFERENCES CLASSES(class_id)
+        ON UPDATE CASCADE ON DELETE CASCADE,
+    FOREIGN KEY (student_id) REFERENCES STUDENTS(student_id)
+        ON UPDATE CASCADE ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ==========================
+-- 7️⃣ ATTENDANCE
+-- ==========================
+CREATE TABLE ATTENDANCE (
+    attendance_id INT AUTO_INCREMENT PRIMARY KEY,
+    assignment_id INT NOT NULL,
+    date DATE NOT NULL,
+    status ENUM('present', 'absent', 'late') NOT NULL,
+    FOREIGN KEY (assignment_id) REFERENCES CLASS_ASSIGNMENTS(assignment_id)
+        ON UPDATE CASCADE ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ==========================
+-- 8️⃣ GRADES
+-- ==========================
+CREATE TABLE GRADES (
+    grade_id INT AUTO_INCREMENT PRIMARY KEY,
+    assignment_id INT NOT NULL,
+    grade FLOAT NOT NULL CHECK (grade BETWEEN 0 AND 10),
+    remarks TEXT,
+    FOREIGN KEY (assignment_id) REFERENCES CLASS_ASSIGNMENTS(assignment_id)
+        ON UPDATE CASCADE ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ==========================
+-- 9️⃣ TEACHING_MATERIALS
+-- ==========================
+CREATE TABLE TEACHING_MATERIALS (
+    material_id INT AUTO_INCREMENT PRIMARY KEY,
+    class_id INT NOT NULL,
+    lecturer_id INT NOT NULL,
+    file_url VARCHAR(255) NOT NULL,
+    upload_date DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (class_id) REFERENCES CLASSES(class_id)
+        ON UPDATE CASCADE ON DELETE CASCADE,
+    FOREIGN KEY (lecturer_id) REFERENCES LECTURERS(lecturer_id)
+        ON UPDATE CASCADE ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ==========================
+-- 🔟 TICKETS
+-- ==========================
+CREATE TABLE TICKETS (
+    ticket_id INT AUTO_INCREMENT PRIMARY KEY,
+    submitted_by INT NOT NULL,
+    assigned_to INT,
+    issue_type VARCHAR(100) NOT NULL,
+    description TEXT NOT NULL,
+    status ENUM('open', 'in_progress', 'resolved') NOT NULL DEFAULT 'open',
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    resolved_at DATETIME NULL,
+    FOREIGN KEY (submitted_by) REFERENCES USERS(user_id)
+        ON UPDATE CASCADE ON DELETE CASCADE,
+    FOREIGN KEY (assigned_to) REFERENCES USERS(user_id)
+        ON UPDATE CASCADE ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ==========================
+-- 1️⃣1️⃣ REPORTS
+-- ==========================
+CREATE TABLE REPORTS (
+    report_id INT AUTO_INCREMENT PRIMARY KEY,
+    generated_by INT NOT NULL,
+    report_type VARCHAR(100) NOT NULL,
+    file_url VARCHAR(255) NOT NULL,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (generated_by) REFERENCES USERS(user_id)
+        ON UPDATE CASCADE ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ==========================
+-- 1️⃣2️⃣ NOTIFICATIONS
+-- ==========================
+CREATE TABLE NOTIFICATIONS (
+    notification_id INT AUTO_INCREMENT PRIMARY KEY,
+    user_id INT NOT NULL,
+    message TEXT NOT NULL,
+    is_read BOOLEAN NOT NULL DEFAULT FALSE,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES USERS(user_id)
+        ON UPDATE CASCADE ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ✅ Done
+
+-- ==========================
+-- 🔹 SEED DATA
+-- ==========================
+INSERT INTO ROLES (role_name, description, created_at)
+VALUES
+('manager', 'System Manager - quản trị toàn hệ thống', NOW()),
+('tc', 'Training Coordinator - điều phối đào tạo', NOW()),
+('cs', 'Customer Support - chăm sóc học viên', NOW()),
+('lec', 'Lecturer - giảng viên', NOW());
+
+-- MANAGER (role_id = 1)
+INSERT INTO USERS (name, email, password_hash, role_id, status, created_at)
+VALUES ('Manager One', 'manager1@lms.com', '$2b$12$BARBagZbum3Bsok453JM0OJtrccGnZydq1MkkZ.jEUAEIUAf5GPhO', 1, 'active', '2025-10-16 17:58:19');
+INSERT INTO USERS (name, email, password_hash, role_id, status, created_at)
+VALUES ('Manager Two', 'manager2@lms.com', '$2b$12$BARBagZbum3Bsok453JM0OJtrccGnZydq1MkkZ.jEUAEIUAf5GPhO', 1, 'active', '2025-10-16 17:58:19');
+
+-- TC (role_id = 2)
+INSERT INTO USERS (name, email, password_hash, role_id, status, created_at)
+VALUES ('TC One', 'tc1@lms.com', '$2b$12$BARBagZbum3Bsok453JM0OJtrccGnZydq1MkkZ.jEUAEIUAf5GPhO', 2, 'active', '2025-10-16 17:58:19');
+INSERT INTO USERS (name, email, password_hash, role_id, status, created_at)
+VALUES ('TC Two', 'tc2@lms.com', '$2b$12$BARBagZbum3Bsok453JM0OJtrccGnZydq1MkkZ.jEUAEIUAf5GPhO', 2, 'active', '2025-10-16 17:58:19');
+
+-- CS (role_id = 3)
+INSERT INTO USERS (name, email, password_hash, role_id, status, created_at)
+VALUES ('CS One', 'cs1@lms.com', '$2b$12$BARBagZbum3Bsok453JM0OJtrccGnZydq1MkkZ.jEUAEIUAf5GPhO', 3, 'active', '2025-10-16 17:58:19');
+INSERT INTO USERS (name, email, password_hash, role_id, status, created_at)
+VALUES ('CS Two', 'cs2@lms.com', '$2b$12$BARBagZbum3Bsok453JM0OJtrccGnZydq1MkkZ.jEUAEIUAf5GPhO', 3, 'active', '2025-10-16 17:58:19');
+
+-- LEC (role_id = 4)
+INSERT INTO USERS (name, email, password_hash, role_id, status, created_at)
+VALUES ('Lecturer One', 'lec1@lms.com', '$2b$12$BARBagZbum3Bsok453JM0OJtrccGnZydq1MkkZ.jEUAEIUAf5GPhO', 4, 'active', '2025-10-16 17:58:19');
+INSERT INTO USERS (name, email, password_hash, role_id, status, created_at)
+VALUES ('Lecturer Two', 'lec2@lms.com', '$2b$12$BARBagZbum3Bsok453JM0OJtrccGnZydq1MkkZ.jEUAEIUAf5GPhO', 4, 'active', '2025-10-16 17:58:19');

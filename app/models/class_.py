@@ -1,0 +1,25 @@
+from sqlalchemy import Column, Integer, String, Enum, ForeignKey, DateTime
+from sqlalchemy.orm import relationship
+from datetime import datetime
+from app.db.database import Base
+import enum
+
+class ClassStatus(enum.Enum):
+    active = "active"
+    archived = "archived"
+
+class Class(Base):
+    __tablename__ = "CLASSES"
+
+    class_id = Column(Integer, primary_key=True, autoincrement=True)
+    class_name = Column(String(100), nullable=False)
+    lecturer_id = Column(Integer, ForeignKey("LECTURERS.lecturer_id", onupdate="CASCADE", ondelete="RESTRICT"), nullable=False)
+    schedule = Column(String(100), nullable=False)
+    created_by = Column(Integer, ForeignKey("USERS.user_id", onupdate="CASCADE", ondelete="RESTRICT"), nullable=False)
+    status = Column(Enum(ClassStatus), default=ClassStatus.active, nullable=False)
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+
+    lecturer = relationship("Lecturer", back_populates="classes")
+    creator = relationship("User", back_populates="created_classes")
+    assignments = relationship("ClassAssignment", back_populates="class_")
+    materials = relationship("TeachingMaterial", back_populates="class_")

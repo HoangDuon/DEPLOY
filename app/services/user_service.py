@@ -1,0 +1,43 @@
+from fastapi import HTTPException
+from app.models.user import User
+from app.db.database import SessionLocal
+from app.core.config import settings
+from jose import jwt
+from datetime import datetime, timedelta, timezone
+from passlib.context import CryptContext
+
+pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+
+def verify_password(plain_password, hashed_password):
+    return pwd_context.verify(plain_password, hashed_password)
+
+def authenticate_user(username: str, password: str):
+    db = SessionLocal()
+    user = (
+        db.query(User).join(User.role)
+        .filter(User.name == username)
+        .first()
+    )
+    if not user: 
+        raise HTTPException(status_code=401, detail="Invalid User")
+    
+    if not verify_password(password, user.password_hash):
+        raise HTTPException(status_code=401, detail="Invalid Password")
+    
+    role_name = user.role.role_name if user.role else "No Role"
+
+    user_data = {
+        "user_id": user.user_id,
+        "username": user.name,
+        "password_hash": user.password_hash,
+        "role": role_name
+    }
+
+    return user_data
+
+def create_access_token(data: dict, expires_delta: timedelta = None):
+    to_encode = data.copy()
+    expire = datetime.now(timezone.utc) + (expires_delta or timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES))
+    to_encode.update({"exp": expire})
+    encoded_jwt = jwt.encode(to_encode, settings.JWT_SECRET_KEY, algorithm=settings.JWT_ALGORITHM)
+    return encoded_jwt

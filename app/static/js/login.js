@@ -14,6 +14,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 { username: 'tc', password: '123456', role: 'tc', fullName: 'Trần Thị TC' },
                 { username: 'lec', password: '123456', role: 'lec', fullName: 'Lê Văn Giáo Viên' },
                 { username: 'cs', password: '123456', role: 'cs', fullName: 'Nguyễn Hữu CS' },
+                { username: 'student', password: '123456', role: 'student', fullName: 'Nguyễn Hữu Student' },
             ]
         },
 
@@ -76,6 +77,9 @@ document.addEventListener('DOMContentLoaded', () => {
                     break;
                 case 'cs':
                     dashboardUrl = 'cs_dashboard.html';
+                    break;
+                case 'student':
+                    dashboardUrl = 'student.html';
                     break;
             }
 

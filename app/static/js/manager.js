@@ -1,526 +1,691 @@
-// app/static/js/manager.js
 document.addEventListener('DOMContentLoaded', () => {
 
     // ==================================================================
-    // TÁCH BIỆT DỮ LIỆU KHỎI LOGIC
+    // DỮ LIỆU MẪU (Mock Data)
     // ==================================================================
-    const MOCK_DATA = {
-        users: [
-            { id: 1, name: 'Lê Văn Giáo Viên', email: 'lec.le@example.com', role: 'lec', status: 'active' },
-            { id: 2, name: 'Trần Thị TC', email: 'tc.tran@example.com', role: 'tc', status: 'active' },
-            { id: 3, name: 'Nguyễn Hữu CS', email: 'cs.nguyen@example.com', role: 'cs', status: 'locked' },
-            { id: 4, name: 'Admin Manager', email: 'manager.admin@example.com', role: 'manager', status: 'active' },
+    let MOCK_DATA = {
+        summary: { students: 150, classes: 25, lecturers: 15, tickets: 8 },
+        activeUsers: [
+            { id: 'MGR01', name: 'Admin Manager', email: 'mgr@lms.edu', role: 'manager', status: 'active' },
+            { id: 'LEC05', name: 'Nguyễn Văn A', email: 'lec05@lms.edu', role: 'lec', status: 'active' },
+            { id: 'TC02', name: 'Trần Thị B', email: 'tc02@lms.edu', role: 'tc', status: 'active' },
+            { id: 'CS01', name: 'Lê Hữu C', email: 'cs01@lms.edu', role: 'cs', status: 'active' },
+        ],
+        pendingUsers: [ // DANH SÁCH CHỜ DUYỆT
+            { id: 'LEC06', name: 'Phạm Văn D', email: 'lec06@lms.edu', role: 'lec', dateCreated: '16/10/2025' },
+            { id: 'CS02', name: 'Hoàng Thị E', email: 'cs02@lms.edu', role: 'cs', dateCreated: '17/10/2025' },
+            { id: 'TC03', name: 'Vũ Đình G', email: 'tc03@lms.edu', role: 'tc', dateCreated: '18/10/2025' },
         ],
         tickets: [
-            { 
-                id: 'TK004', type: 'Vấn đề Học tập', title: 'Xin nghỉ học 2 buổi', 
-                sender: 'HV005 (Nguyễn Văn A)', cs: 'CS001 (Lê Thị Xuân)', 
-                status: 'pending', date: '14/10/2025', 
-                description: 'Em cần nghỉ 2 buổi học vì lý do cá nhân. Đã thông báo cho giáo viên, cần Manager duyệt cuối cùng.' 
-            },
-            { 
-                id: 'TK005', type: 'Vấn đề Kỹ thuật', title: 'Không truy cập được bài giảng', 
-                sender: 'HV012 (Trần Hữu Hưng)', cs: 'CS002 (Phạm Văn Bình)', 
-                status: 'in_progress', date: '13/10/2025', 
-                description: 'Tôi không thể truy cập các video bài giảng của lớp Lập trình Web. Lỗi hiển thị 404.' 
-            },
-            { 
-                id: 'TK006', type: 'Vấn đề Học phí', title: 'Yêu cầu hoàn trả học phí', 
-                sender: 'HV002 (Ngô Thanh Vân)', cs: 'CS001 (Lê Thị Xuân)', 
-                status: 'pending', date: '12/10/2025', 
-                description: 'Yêu cầu hoàn trả 50% học phí theo chính sách do không thể tiếp tục khóa học.' 
-            },
-            { 
-                id: 'TK007', type: 'Khác', title: 'Phản hồi về chất lượng giảng dạy', 
-                sender: 'HV020 (Nguyễn Văn Thắng)', cs: 'CS003 (Đỗ Mạnh Cường)', 
-                status: 'resolved', date: '11/10/2025', 
-                description: 'Giáo viên A thường xuyên đến muộn 10 phút. Đã được giải quyết.',
-                resolution: 'Đã nhắc nhở giáo viên A và cập nhật lại lịch trình giảng dạy. Đã thông báo lại cho học viên.'
-            }
+            { id: 'T001', type: 'Vấn đề Học tập', title: 'GV yêu cầu đổi lịch', sender: 'LEC05', cs: 'CS01', status: 'pending', date: '15/10/2025', description: 'Giáo viên bị ốm, cần nghỉ buổi tối nay.' },
+            { id: 'T002', type: 'Vấn đề Kỹ thuật', title: 'LMS lỗi report', sender: 'CS01', cs: 'Admin', status: 'in_progress', date: '14/10/2025', description: 'Hệ thống báo cáo tổng quan bị sai dữ liệu.' },
+            { id: 'T003', type: 'Vấn đề Học phí', title: 'HV yêu cầu hoàn tiền', sender: 'HV01', cs: 'TC02', status: 'resolved', date: '13/10/2025', description: 'Học viên muốn rút học phí do không theo kịp.' },
         ],
-        announcements: [ // Dữ liệu mẫu Thông báo
-            { id: 1, title: 'Lịch nghỉ lễ Quốc khánh', content: 'Tất cả nhân viên được nghỉ từ 2/9 đến 4/9.', recipient: 'all', sender: 'Admin Manager', date: '01/09/2025' },
-            { id: 2, title: 'Thông báo họp phòng CS', content: 'Họp gấp về chất lượng dịch vụ vào 14h chiều nay.', recipient: 'cs', sender: 'Admin Manager', date: '10/10/2025' }
-        ]
+        announcements: [
+             { id: 1, title: 'Cập nhật hệ thống LMS', content: 'Hệ thống sẽ bảo trì từ 2h-4h sáng mai. Vui lòng lưu ý.', date: '17/10/2025', recipient: 'all', sender: 'MGR01' },
+             { id: 2, title: 'Quy định mới về nghỉ phép', content: 'Giảng viên cần gửi yêu cầu nghỉ ít nhất 48h.', date: '15/10/2025', recipient: 'lec', sender: 'MGR01' },
+        ],
+        reports: {
+            newStudents: 12, newClasses: 2, attendanceRate: 92, resolvedTickets: 28,
+            chartLabels: ['Tuần 1', 'Tuần 2', 'Tuần 3', 'Tuần 4'],
+            chartData: [25, 30, 20, 45]
+        }
     };
 
-    /**
-     * Module chính điều khiển toàn bộ trang của Manager
-     */
-    const ManagerDashboardApp = {
-        init() {
-            this.UserManagement.init(this);
-            this.UserModal.init(this);
-            this.Reports.init(this);
-            this.TicketManagement.init(this);
-            this.Announcements.init(this); // <-- Đã tích hợp module Thông báo
+    // ===============================================
+    // HELPER FUNCTIONS
+    // ===============================================
+
+    const Helpers = {
+        getStatusTag(status) {
+            let text, style;
+            switch (status) {
+                case 'active': text = 'Hoạt động'; style = 'background-color: #dcfce7; color: #16a34a;'; break;
+                case 'pending': text = 'Chờ xử lý'; style = 'background-color: #fef3c7; color: #d97706;'; break;
+                case 'in_progress': text = 'Đang xử lý'; style = 'background-color: #e0f2f1; color: #0f766e;'; break;
+                case 'resolved': text = 'Đã giải quyết'; style = 'background-color: #bfdbfe; color: #1e40af;'; break;
+                default: text = status; style = 'background-color: #f1f5f9; color: #64748b;';
+            }
+            return `<span class="status active" style="${style}">${text}</span>`;
+        },
+        
+        getRoleDisplay(role) {
+             const map = { 'lec': 'Giảng viên', 'tc': 'Tư vấn', 'cs': 'Chăm sóc HV', 'manager': 'Quản lý', 'all': 'Tất cả' };
+             return map[role] || role;
         },
 
+        parseDateForSort(dateString) {
+            // Chuyển đổi từ 'dd/mm/yyyy' sang đối tượng Date
+            const parts = dateString.split('/');
+            return new Date(parts[2], parts[1] - 1, parts[0]);
+        }
+    };
+
+
+    // ===============================================
+    // MODULE CHÍNH
+    // ===============================================
+
+    const ManagerDashboardApp = {
+        init() {
+            this.loadDashboardSummary();
+            this.UserManagement.init();
+            this.TicketManagement.init();
+            this.AnnouncementManagement.init();
+            this.ReportManagement.init();
+        },
+
+        loadDashboardSummary() {
+            document.querySelector('#dashboard .card-container .card:nth-child(1) h3').textContent = MOCK_DATA.summary.students;
+            document.querySelector('#dashboard .card-container .card:nth-child(2) h3').textContent = MOCK_DATA.summary.classes;
+            document.querySelector('#dashboard .card-container .card:nth-child(3) h3').textContent = MOCK_DATA.summary.lecturers;
+            document.querySelector('#dashboard .card-container .card:nth-child(4) h3').textContent = MOCK_DATA.tickets.filter(t => t.status === 'pending').length;
+        },
+        
         // ==================================================================
-        // MODULE QUẢN LÝ NGƯỜI DÙNG (BẢNG & TÌM KIẾM)
+        // MODULE QUẢN LÝ NGƯỜI DÙNG (Cập nhật Batch Approval)
         // ==================================================================
         UserManagement: {
-            parent: null,
-            init(parent) {
-                this.parent = parent;
+            isBatchMode: false, // Biến trạng thái mới
+            
+            init() {
                 this.DOM = {
-                    tableBody: document.getElementById('users-table-body'),
-                    searchInput: document.getElementById('user-search-input'),
-                    addUserBtn: document.getElementById('add-user-btn'),
+                    tabs: document.querySelectorAll('.user-tab'),
+                    activeUsersView: document.getElementById('active-users-view'),
+                    pendingUsersView: document.getElementById('pending-users-view'),
+                    activeTableBody: document.getElementById('users-table-body'),
+                    pendingTableBody: document.getElementById('pending-users-table-body'),
+                    searchActive: document.getElementById('user-search-input'), 
+                    searchPending: document.getElementById('pending-user-search-input'), 
+                    addBtn: document.getElementById('add-user-btn'),
+                    
+                    // Batch Mode DOM elements (MỚI)
+                    batchToggleBtn: document.getElementById('batch-approve-toggle-btn'),
+                    batchActionFooter: document.getElementById('batch-action-footer'),
+                    cancelBatchBtn: document.getElementById('cancel-batch-btn'),
+                    confirmBatchApproveBtn: document.getElementById('confirm-batch-approve-btn'),
+                    pendingActionHeader: document.getElementById('pending-action-header'),
+                    
+                    // Modal Xác nhận (MỚI)
+                    confirmModalOverlay: document.getElementById('batch-approve-confirm-modal-overlay'),
+                    closeConfirmModalBtn: document.getElementById('close-batch-modal-btn'),
+                    cancelConfirmBtn: document.getElementById('cancel-batch-confirm-btn'),
+                    finalBatchApproveBtn: document.getElementById('final-batch-approve-btn'),
+                    batchUsersList: document.getElementById('batch-users-list'),
+                    
+                    // Modal Sửa/Tạo
+                    modalOverlay: document.getElementById('user-modal-overlay'),
+                    modalTitle: document.getElementById('user-modal-title'),
+                    saveBtn: document.getElementById('save-user-btn'),
+                    form: document.getElementById('user-form'),
                 };
-                if (!this.DOM.tableBody) return;
-                this.render(MOCK_DATA.users);
                 this.bindEvents();
+                this.renderActiveUsers(MOCK_DATA.activeUsers);
+                this.renderPendingUsers(MOCK_DATA.pendingUsers); 
             },
-            render(users) {
-                this.DOM.tableBody.innerHTML = '';
+
+            bindEvents() {
+                this.DOM.tabs.forEach(btn => btn.addEventListener('click', (e) => this.switchTab(e.currentTarget.dataset.tab)));
+                this.DOM.searchActive.addEventListener('input', () => this.filterActiveUsers(this.DOM.searchActive.value));
+                this.DOM.searchPending.addEventListener('input', () => this.filterPendingUsers(this.DOM.searchPending.value));
+                this.DOM.addBtn.addEventListener('click', () => this.openModal('add'));
+                this.DOM.activeTableBody.addEventListener('click', (e) => this.handleTableActions(e));
+                
+                // Sự kiện Batch Approval (MỚI)
+                this.DOM.batchToggleBtn.addEventListener('click', () => this.toggleBatchMode());
+                this.DOM.cancelBatchBtn.addEventListener('click', () => this.toggleBatchMode(false));
+                this.DOM.confirmBatchApproveBtn.addEventListener('click', () => this.openBatchConfirmModal());
+                this.DOM.finalBatchApproveBtn.addEventListener('click', () => this.executeBatchApproval());
+                this.DOM.cancelConfirmBtn.addEventListener('click', () => this.closeBatchConfirmModal());
+                this.DOM.closeConfirmModalBtn.addEventListener('click', () => this.closeBatchConfirmModal());
+                this.DOM.pendingTableBody.addEventListener('click', (e) => this.handlePendingTableActions(e)); // Phải giữ lại để bắt click checkbox
+                
+                // Sự kiện Modal Sửa/Tạo
+                this.DOM.form.addEventListener('submit', (e) => this.handleSave(e));
+                document.getElementById('close-user-modal-btn').addEventListener('click', () => this.closeModal());
+                document.getElementById('cancel-user-modal-btn').addEventListener('click', () => this.closeModal());
+            },
+
+            // ==================================================================
+            // Batch Mode Logic (MỚI)
+            // ==================================================================
+
+            toggleBatchMode(force = null) {
+                this.isBatchMode = force === null ? !this.isBatchMode : force;
+                
+                if (this.isBatchMode) {
+                    this.DOM.pendingActionHeader.innerHTML = '<input type="checkbox" id="select-all-pending">';
+                    this.DOM.batchToggleBtn.classList.remove('btn-warning');
+                    this.DOM.batchToggleBtn.classList.add('btn-secondary');
+                    this.DOM.batchToggleBtn.innerHTML = '<i class="fas fa-times"></i> Hủy duyệt hàng loạt';
+                    this.DOM.batchActionFooter.classList.remove('hidden');
+                    // Gán sự kiện Select All (bên trong header)
+                    document.getElementById('select-all-pending').addEventListener('change', (e) => this.toggleSelectAll(e.target.checked));
+                } else {
+                    this.DOM.pendingActionHeader.textContent = 'Hành động';
+                    this.DOM.batchToggleBtn.classList.remove('btn-secondary');
+                    this.DOM.batchToggleBtn.classList.add('btn-warning');
+                    this.DOM.batchToggleBtn.innerHTML = '<i class="fas fa-list-check"></i> Duyệt hàng loạt';
+                    this.DOM.batchActionFooter.classList.add('hidden');
+                }
+                // Tải lại bảng để render Checkbox/Button tương ứng
+                this.renderPendingUsers(MOCK_DATA.pendingUsers); 
+                this.updateBatchCount();
+            },
+            
+            toggleSelectAll(checked) {
+                this.DOM.pendingTableBody.querySelectorAll('.user-checkbox').forEach(cb => {
+                    cb.checked = checked;
+                });
+                this.updateBatchCount();
+            },
+            
+            updateBatchCount() {
+                const count = this.DOM.pendingTableBody.querySelectorAll('.user-checkbox:checked').length;
+                this.DOM.confirmBatchApproveBtn.innerHTML = `<i class="fas fa-check-double"></i> Duyệt (${count}) tài khoản đã chọn`;
+                this.DOM.confirmBatchApproveBtn.disabled = count === 0;
+            },
+
+            openBatchConfirmModal() {
+                const checkedBoxes = this.DOM.pendingTableBody.querySelectorAll('.user-checkbox:checked');
+                const selectedUserIds = Array.from(checkedBoxes).map(cb => cb.dataset.id);
+
+                if (selectedUserIds.length === 0) {
+                    alert('Vui lòng chọn ít nhất một tài khoản để duyệt.');
+                    return;
+                }
+
+                // Lấy thông tin chi tiết của người dùng đã chọn
+                const selectedUsers = MOCK_DATA.pendingUsers.filter(u => selectedUserIds.includes(u.id));
+                
+                this.DOM.batchUsersList.innerHTML = '';
+                selectedUsers.forEach(user => {
+                    const listItem = document.createElement('li');
+                    listItem.textContent = `${user.name} (${user.id}) - Vai trò: ${Helpers.getRoleDisplay(user.role)}`;
+                    this.DOM.batchUsersList.appendChild(listItem);
+                });
+
+                // Lưu ID đã chọn vào nút xác nhận cuối cùng
+                this.DOM.finalBatchApproveBtn.dataset.ids = selectedUserIds.join(',');
+
+                this.DOM.confirmModalOverlay.classList.remove('hidden');
+            },
+            
+            closeBatchConfirmModal() {
+                this.DOM.confirmModalOverlay.classList.add('hidden');
+            },
+            
+            executeBatchApproval() {
+                const idsToApprove = this.DOM.finalBatchApproveBtn.dataset.ids.split(',');
+                let approvedCount = 0;
+                
+                idsToApprove.forEach(userId => {
+                    const index = MOCK_DATA.pendingUsers.findIndex(u => u.id === userId);
+                    if (index !== -1) {
+                        const user = MOCK_DATA.pendingUsers.splice(index, 1)[0];
+                        user.status = 'active';
+                        MOCK_DATA.activeUsers.push(user);
+                        approvedCount++;
+                    }
+                });
+                
+                this.closeBatchConfirmModal();
+                this.toggleBatchMode(false); // Thoát khỏi chế độ Batch
+                this.renderPendingUsers(MOCK_DATA.pendingUsers);
+                this.renderActiveUsers(MOCK_DATA.activeUsers);
+                ManagerDashboardApp.loadDashboardSummary();
+                alert(`✅ Đã duyệt thành công ${approvedCount} tài khoản!`);
+            },
+
+            // ==================================================================
+            // Rendering & Filtering (Cập nhật để hỗ trợ Batch Mode)
+            // ==================================================================
+            
+            switchTab(targetTab) {
+                // ... (Giữ nguyên logic chuyển tab)
+                this.isBatchMode = false; // Reset chế độ Batch khi chuyển tab
+                this.DOM.batchActionFooter.classList.add('hidden');
+                this.DOM.pendingActionHeader.textContent = 'Hành động'; // Reset header
+                this.DOM.batchToggleBtn.classList.remove('btn-secondary');
+                this.DOM.batchToggleBtn.classList.add('btn-warning');
+                this.DOM.batchToggleBtn.innerHTML = '<i class="fas fa-list-check"></i> Duyệt hàng loạt';
+                
+                this.DOM.tabs.forEach(btn => btn.classList.toggle('active', btn.dataset.tab === targetTab));
+                this.DOM.activeUsersView.classList.toggle('active', targetTab === 'active-users-view');
+                this.DOM.activeUsersView.classList.toggle('hidden', targetTab !== 'active-users-view');
+                this.DOM.pendingUsersView.classList.toggle('active', targetTab === 'pending-users-view');
+                this.DOM.pendingUsersView.classList.toggle('hidden', targetTab !== 'pending-users-view');
+                
+                if (targetTab === 'pending-users-view') {
+                    this.DOM.searchPending.value = '';
+                    this.renderPendingUsers(MOCK_DATA.pendingUsers);
+                } else if (targetTab === 'active-users-view') {
+                    this.DOM.searchActive.value = '';
+                    this.renderActiveUsers(MOCK_DATA.activeUsers);
+                }
+            },
+            
+            // Render Bảng Người dùng Chờ duyệt (CẬP NHẬT)
+            renderPendingUsers(users) {
+                this.DOM.pendingTableBody.innerHTML = '';
                 if (users.length === 0) {
-                    this.DOM.tableBody.innerHTML = `<tr><td colspan="6" style="text-align:center;">Không tìm thấy người dùng.</td></tr>`;
+                     this.DOM.pendingTableBody.innerHTML = `<tr><td colspan="6" style="text-align:center;">Không có tài khoản nào đang chờ duyệt.</td></tr>`;
                     return;
                 }
                 users.forEach(user => {
-                    const statusClass = user.status === 'active' ? 'status-active' : 'status-locked';
-                    const statusText = user.status === 'active' ? 'Hoạt động' : 'Đã khóa';
-                    const lockIcon = user.status === 'active' ? 'fa-lock-open' : 'fa-lock';
-                    const row = `
-                        <tr>
-                            <td>${user.id}</td>
-                            <td>${user.name}</td>
-                            <td>${user.email}</td>
-                            <td>${user.role.toUpperCase()}</td>
-                            <td><span class="status ${statusClass}">${statusText}</span></td>
-                            <td>
-                                <button class="btn btn-secondary edit-btn" data-id="${user.id}" title="Chỉnh sửa"><i class="fas fa-edit"></i></button>
-                                <button class="btn btn-secondary lock-btn" data-id="${user.id}" title="Khóa/Mở"><i class="fas ${lockIcon}"></i></button>
-                            </td>
-                        </tr>`;
-                    this.DOM.tableBody.insertAdjacentHTML('beforeend', row);
+                    const row = this.DOM.pendingTableBody.insertRow();
+                    
+                    const actionCellContent = this.isBatchMode 
+                        ? `<input type="checkbox" class="user-checkbox" data-id="${user.id}" data-name="${user.name}">`
+                        : `
+                            <button class="btn btn-primary btn-sm approve-btn" data-id="${user.id}"><i class="fas fa-check"></i> Duyệt</button>
+                            <button class="btn btn-danger btn-sm reject-btn" data-id="${user.id}"><i class="fas fa-times"></i> Từ chối</button>
+                          `;
+                          
+                    row.innerHTML = `
+                        <td>${actionCellContent}</td>
+                        <td>${user.id}</td>
+                        <td>${user.name}</td>
+                        <td>${user.email}</td>
+                        <td>${Helpers.getRoleDisplay(user.role)}</td>
+                        <td>${user.dateCreated}</td>
+                    `;
                 });
             },
-            bindEvents() {
-                this.DOM.searchInput.addEventListener('input', (e) => {
-                    const searchTerm = e.target.value.toLowerCase();
-                    const filteredUsers = MOCK_DATA.users.filter(u =>
-                        u.name.toLowerCase().includes(searchTerm) || u.email.toLowerCase().includes(searchTerm)
-                    );
-                    this.render(filteredUsers);
-                });
-                this.DOM.tableBody.addEventListener('click', (e) => {
-                    const editBtn = e.target.closest('.edit-btn');
-                    if (editBtn) this.parent.UserModal.open('edit', editBtn.dataset.id);
-
-                    const lockBtn = e.target.closest('.lock-btn');
-                    if (lockBtn) this.toggleLockStatus(lockBtn.dataset.id);
-                });
-                this.DOM.addUserBtn.addEventListener('click', () => this.parent.UserModal.open('create'));
-            },
-            toggleLockStatus(userId) {
-                const user = MOCK_DATA.users.find(u => u.id == userId);
-                if (user) {
-                    user.status = user.status === 'active' ? 'locked' : 'active';
-                    this.render(MOCK_DATA.users);
-                }
-            }
-        },
-
-        // ==================================================================
-        // MODULE QUẢN LÝ MODAL THÊM/SỬA NGƯỜI DÙNG
-        // ==================================================================
-        UserModal: {
-            parent: null,
-            init(parent) {
-                this.parent = parent;
-                this.DOM = {
-                    overlay: document.getElementById('user-modal-overlay'),
-                    title: document.getElementById('user-modal-title'),
-                    closeBtn: document.getElementById('close-user-modal-btn'),
-                    cancelBtn: document.getElementById('cancel-user-modal-btn'),
-                    form: document.getElementById('user-form'),
-                    idInput: document.getElementById('user-id'),
-                    passwordInput: document.getElementById('user-password'),
-                };
-                if (!this.DOM.overlay) return;
-                this.bindEvents();
-            },
-            bindEvents() {
-                this.DOM.closeBtn.addEventListener('click', () => this.close());
-                this.DOM.cancelBtn.addEventListener('click', () => this.close());
-                this.DOM.form.addEventListener('submit', (e) => this.handleSubmit(e));
-            },
-            open(mode, userId = null) {
-                this.DOM.form.reset();
-                this.DOM.idInput.value = '';
+            
+            // Xử lý sự kiện trong bảng Pending (CẬP NHẬT để bắt checkbox)
+            handlePendingTableActions(e) {
+                const target = e.target;
                 
-                if (mode === 'create') {
-                    this.DOM.title.textContent = 'Thêm người dùng mới';
-                    this.DOM.passwordInput.setAttribute('required', 'true');
-                } else {
-                    this.DOM.title.textContent = 'Chỉnh sửa người dùng';
-                    this.DOM.passwordInput.removeAttribute('required');
-                    const user = MOCK_DATA.users.find(u => u.id == userId);
-                    if (user) {
-                        this.DOM.idInput.value = user.id;
-                        this.DOM.form.querySelector('#user-fullname').value = user.name;
-                        this.DOM.form.querySelector('#user-email').value = user.email;
-                        this.DOM.form.querySelector('#user-role').value = user.role;
+                if (this.isBatchMode && target.classList.contains('user-checkbox')) {
+                    this.updateBatchCount();
+                    return;
+                }
+                
+                const button = target.closest('button');
+                if (!button || this.isBatchMode) return;
+                
+                const userId = button.dataset.id;
+                
+                if (button.classList.contains('approve-btn')) {
+                    this.approveUser(userId);
+                } else if (button.classList.contains('reject-btn')) {
+                    this.rejectUser(userId);
+                }
+            },
+            
+            // ... (Các hàm khác giữ nguyên: renderActiveUsers, filterActiveUsers, filterPendingUsers, approveUser, rejectUser, handleTableActions, openModal, closeModal, handleSave) ...
+            
+            // ==================================================================
+            // (Các hàm giữ nguyên từ bản trước)
+            // ==================================================================
+            renderActiveUsers(users) {
+                this.DOM.activeTableBody.innerHTML = '';
+                users.forEach(user => {
+                    const row = this.DOM.activeTableBody.insertRow();
+                    row.innerHTML = `
+                        <td>${user.id}</td>
+                        <td>${user.name}</td>
+                        <td>${user.email}</td>
+                        <td>${Helpers.getRoleDisplay(user.role)}</td>
+                        <td>${Helpers.getStatusTag(user.status)}</td>
+                        <td>
+                            <button class="btn btn-secondary btn-sm edit-btn" data-id="${user.id}"><i class="fas fa-edit"></i> Sửa</button>
+                            <button class="btn btn-danger btn-sm delete-btn" data-id="${user.id}"><i class="fas fa-trash"></i> Xóa</button>
+                        </td>
+                    `;
+                });
+            },
+
+            filterActiveUsers(searchTerm) {
+                const lowerCaseTerm = searchTerm.toLowerCase();
+                const filtered = MOCK_DATA.activeUsers.filter(user => 
+                    user.name.toLowerCase().includes(lowerCaseTerm) || 
+                    user.email.toLowerCase().includes(lowerCaseTerm)
+                );
+                this.renderActiveUsers(filtered);
+            },
+            
+            filterPendingUsers(searchTerm) {
+                const lowerCaseTerm = searchTerm.toLowerCase();
+                const filtered = MOCK_DATA.pendingUsers.filter(user => 
+                    user.name.toLowerCase().includes(lowerCaseTerm) || 
+                    user.email.toLowerCase().includes(lowerCaseTerm)
+                );
+                this.renderPendingUsers(filtered);
+            },
+            
+            approveUser(userId) {
+                const index = MOCK_DATA.pendingUsers.findIndex(u => u.id === userId);
+                if (index === -1) return;
+                
+                const user = MOCK_DATA.pendingUsers.splice(index, 1)[0];
+                user.status = 'active';
+                MOCK_DATA.activeUsers.push(user);
+                
+                this.renderPendingUsers(MOCK_DATA.pendingUsers);
+                this.renderActiveUsers(MOCK_DATA.activeUsers);
+                ManagerDashboardApp.loadDashboardSummary();
+                alert(`✅ Đã duyệt tài khoản ${userId} (${user.name})`);
+            },
+            
+            rejectUser(userId) {
+                 const index = MOCK_DATA.pendingUsers.findIndex(u => u.id === userId);
+                 if (index === -1) return;
+                 MOCK_DATA.pendingUsers.splice(index, 1);
+                 this.renderPendingUsers(MOCK_DATA.pendingUsers);
+                 alert(`Đã từ chối và xóa tài khoản ${userId}.`);
+            },
+            
+            handleTableActions(e) {
+                const target = e.target.closest('button');
+                if (!target) return;
+                const userId = target.dataset.id;
+                
+                if (target.classList.contains('edit-btn')) {
+                    const user = MOCK_DATA.activeUsers.find(u => u.id === userId);
+                    if (user) this.openModal('edit', user);
+                } else if (target.classList.contains('delete-btn')) {
+                    if (confirm(`Bạn có chắc chắn muốn xóa người dùng ${userId} không?`)) {
+                        MOCK_DATA.activeUsers = MOCK_DATA.activeUsers.filter(u => u.id !== userId);
+                        this.renderActiveUsers(MOCK_DATA.activeUsers);
+                        alert(`Đã xóa người dùng ${userId}.`);
                     }
                 }
-                this.DOM.overlay.classList.remove('hidden');
             },
-            close() {
-                this.DOM.overlay.classList.add('hidden');
+            
+            openModal(mode, user = {}) {
+                this.DOM.modalTitle.textContent = mode === 'add' ? 'Thêm người dùng mới' : `Sửa người dùng ${user.id}`;
+                this.DOM.form.reset();
+                
+                if (mode === 'edit') {
+                    document.getElementById('user-id').value = user.id;
+                    document.getElementById('user-fullname').value = user.name;
+                    document.getElementById('user-email').value = user.email;
+                    document.getElementById('user-role').value = user.role;
+                    document.getElementById('user-password').placeholder = 'Để trống nếu không muốn thay đổi';
+                } else {
+                    document.getElementById('user-id').value = '';
+                    document.getElementById('user-password').placeholder = 'Nhập mật khẩu';
+                }
+                
+                this.DOM.saveBtn.textContent = mode === 'add' ? 'Tạo tài khoản' : 'Lưu thay đổi';
+                this.DOM.modalOverlay.classList.remove('hidden');
             },
-            handleSubmit(e) {
+            
+            closeModal() {
+                this.DOM.modalOverlay.classList.add('hidden');
+            },
+            
+            handleSave(e) {
                 e.preventDefault();
-                const id = this.DOM.idInput.value;
                 const formData = new FormData(this.DOM.form);
                 const data = Object.fromEntries(formData.entries());
+                const mode = data.id ? 'edit' : 'add';
 
-                if (id) { // Cập nhật
-                    const user = MOCK_DATA.users.find(u => u.id == id);
-                    if (user) Object.assign(user, data);
-                } else { // Tạo mới
-                    data.id = MOCK_DATA.users.length + 5; // ID tạm
-                    data.status = 'active';
-                    MOCK_DATA.users.push(data);
+                if (mode === 'add') {
+                    const newId = data.role.toUpperCase() + (MOCK_DATA.activeUsers.length + MOCK_DATA.pendingUsers.length + 1).toString().padStart(2, '0');
+                    const newUser = { id: newId, name: data.name, email: data.email, role: data.role, dateCreated: new Date().toLocaleDateString('vi-VN') };
+                    
+                    MOCK_DATA.pendingUsers.push(newUser); 
+                    alert(`✅ Tạo người dùng ${newId} thành công! Cần duyệt trong tab "Danh sách chờ duyệt".`);
+                    
+                } else {
+                    const index = MOCK_DATA.activeUsers.findIndex(u => u.id === data.id);
+                    if (index !== -1) {
+                        MOCK_DATA.activeUsers[index] = {
+                            ...MOCK_DATA.activeUsers[index],
+                            name: data.name,
+                            email: data.email,
+                            role: data.role
+                        };
+                        alert(`✅ Cập nhật người dùng ${data.id} thành công!`);
+                    }
                 }
-                this.parent.UserManagement.render(MOCK_DATA.users);
-                this.close();
+                
+                this.renderActiveUsers(MOCK_DATA.activeUsers);
+                this.closeModal();
+                if (document.querySelector('.user-tab[data-tab="pending-users-view"]').classList.contains('active')) {
+                     this.renderPendingUsers(MOCK_DATA.pendingUsers);
+                }
             }
         },
 
         // ==================================================================
-        // MODULE QUẢN LÝ TICKET (REVIEW & RESOLVE)
+        // MODULE QUẢN LÝ TICKET (Giữ nguyên)
         // ==================================================================
         TicketManagement: {
-            parent: null,
-            init(parent) {
-                this.parent = parent;
+            init() {
                 this.DOM = {
                     tableBody: document.getElementById('manager-ticket-table-body'),
-                    statusFilter: document.getElementById('ticket-filter-status'),
-                    typeFilter: document.getElementById('ticket-filter-type'),
+                    filterStatus: document.getElementById('ticket-filter-status'),
+                    filterType: document.getElementById('ticket-filter-type'),
                     modalOverlay: document.getElementById('ticket-detail-modal-overlay'),
-                    closeBtn: document.getElementById('close-ticket-detail-modal-btn'),
-                    closeTicketBtn: document.getElementById('close-ticket-btn'),
+                    closeModalBtn: document.getElementById('close-ticket-detail-modal-btn'),
                     resolveBtn: document.getElementById('resolve-ticket-btn'),
-                    ticketManagementSection: document.getElementById('ticket-management')
+                    closeBtn: document.getElementById('close-ticket-btn'),
                 };
-                if (!this.DOM.tableBody) return;
-                this.loadTicketData();
                 this.bindEvents();
+                this.renderTickets();
             },
-            
-            getStatusTag(status) {
-                let text = '';
-                let style = '';
-                switch (status) {
-                    case 'pending':
-                        text = 'Chờ xử lý';
-                        style = 'background-color: #fef3c7; color: #d97706;'; // Vàng đậm
-                        break;
-                    case 'in_progress':
-                        text = 'Đang xử lý';
-                        style = 'background-color: #e0f2f1; color: #0f766e;'; // Xanh ngọc
-                        break;
-                    case 'resolved':
-                        text = 'Đã giải quyết';
-                        style = 'background-color: #dcfce7; color: #16a34a;'; // Xanh lá cây
-                        break;
-                    default:
-                        text = 'Không rõ';
-                        style = 'background-color: #f1f5f9; color: #64748b;';
-                }
-                return `<span class="status active" style="${style}">${text}</span>`;
+
+            bindEvents() {
+                this.DOM.filterStatus.addEventListener('change', () => this.renderTickets());
+                this.DOM.filterType.addEventListener('change', () => this.renderTickets());
+                this.DOM.tableBody.addEventListener('click', (e) => this.handleTableActions(e));
+                this.DOM.closeModalBtn.addEventListener('click', () => this.closeModal());
+                this.DOM.closeBtn.addEventListener('click', () => this.closeModal());
+                this.DOM.resolveBtn.addEventListener('click', () => this.resolveTicket());
             },
-            
-            loadTicketData() {
-                if (!this.DOM.statusFilter || !this.DOM.typeFilter) return; // Bảo vệ
-                
-                const statusFilter = this.DOM.statusFilter.value;
-                const typeFilter = this.DOM.typeFilter.value;
 
-                const filteredTickets = MOCK_DATA.tickets.filter(ticket => {
-                    const statusMatch = statusFilter === 'all' || ticket.status === statusFilter;
-                    const typeMatch = typeFilter === 'all' || ticket.type.toLowerCase().includes(typeFilter.replace('_', ' '));
-                    return statusMatch && typeMatch;
-                });
-
+            renderTickets() {
                 this.DOM.tableBody.innerHTML = '';
+                const selectedStatus = this.DOM.filterStatus.value;
+                const selectedType = this.DOM.filterType.value;
 
-                if (filteredTickets.length === 0) {
-                     this.DOM.tableBody.innerHTML = `<tr><td colspan="8" style="text-align:center;">Không tìm thấy Ticket nào.</td></tr>`;
-                    return;
+                let filteredTickets = MOCK_DATA.tickets;
+                
+                if (selectedStatus !== 'all') {
+                    filteredTickets = filteredTickets.filter(t => t.status === selectedStatus);
+                }
+                
+                if (selectedType !== 'all') {
+                    filteredTickets = filteredTickets.filter(t => t.type.toLowerCase().includes(selectedType.replace('_', ' ')));
                 }
 
                 filteredTickets.forEach(ticket => {
                     const row = this.DOM.tableBody.insertRow();
-                    row.insertCell().textContent = ticket.id;
-                    row.insertCell().textContent = ticket.type;
-                    row.insertCell().textContent = ticket.title;
-                    row.insertCell().textContent = ticket.sender;
-                    row.insertCell().textContent = ticket.cs;
-                    row.insertCell().innerHTML = this.getStatusTag(ticket.status);
-                    row.insertCell().textContent = ticket.date;
-
-                    const actionCell = row.insertCell();
-                    actionCell.innerHTML = `
-                        <button class="btn btn-secondary btn-sm view-ticket-btn" data-ticket-id="${ticket.id}">
-                            <i class="fas fa-eye"></i> Xem
-                        </button>
+                    row.innerHTML = `
+                        <td>${ticket.id}</td>
+                        <td>${ticket.type}</td>
+                        <td>${ticket.title}</td>
+                        <td>${ticket.sender}</td>
+                        <td>${ticket.cs}</td>
+                        <td>${Helpers.getStatusTag(ticket.status)}</td>
+                        <td>${ticket.date}</td>
+                        <td>
+                            <button class="btn btn-primary btn-sm view-detail-btn" data-id="${ticket.id}"><i class="fas fa-eye"></i> Xem</button>
+                        </td>
                     `;
                 });
             },
-            
-            openTicketModal(ticketId) {
-                const ticket = MOCK_DATA.tickets.find(t => t.id === ticketId);
-                if (!ticket) return;
 
-                // Điền dữ liệu vào Modal
+            handleTableActions(e) {
+                const btn = e.target.closest('.view-detail-btn');
+                if (btn) {
+                    const ticketId = btn.dataset.id;
+                    const ticket = MOCK_DATA.tickets.find(t => t.id === ticketId);
+                    if (ticket) this.openModal(ticket);
+                }
+            },
+
+            openModal(ticket) {
                 document.getElementById('detail-ticket-id').textContent = ticket.id;
                 document.getElementById('detail-ticket-title').textContent = ticket.title;
                 document.getElementById('detail-ticket-type').textContent = ticket.type;
-                document.getElementById('detail-ticket-status').innerHTML = this.getStatusTag(ticket.status);
+                document.getElementById('detail-ticket-status').innerHTML = Helpers.getStatusTag(ticket.status);
                 document.getElementById('detail-ticket-sender').textContent = ticket.sender;
                 document.getElementById('detail-ticket-cs').textContent = ticket.cs;
                 document.getElementById('detail-ticket-description').value = ticket.description;
-                document.getElementById('manager-resolution').value = ticket.resolution || ''; 
+                document.getElementById('manager-resolution').value = ''; 
                 
-                // Điều chỉnh nút Resolve
-                if (ticket.status === 'resolved') {
-                    this.DOM.resolveBtn.classList.add('hidden');
-                    document.getElementById('manager-resolution').readOnly = true;
-                    document.getElementById('manager-resolution').placeholder = 'Ticket đã được giải quyết.';
-                } else {
-                    this.DOM.resolveBtn.classList.remove('hidden');
-                    document.getElementById('manager-resolution').readOnly = false;
-                    this.DOM.resolveBtn.dataset.ticketId = ticket.id; // Lưu ID để xử lý
-                    document.getElementById('manager-resolution').placeholder = 'Nhập tóm tắt giải quyết vấn đề...';
-                }
-
+                this.DOM.resolveBtn.dataset.id = ticket.id;
                 this.DOM.modalOverlay.classList.remove('hidden');
             },
-            
-            closeTicketModal() {
+
+            closeModal() {
                 this.DOM.modalOverlay.classList.add('hidden');
             },
-            
-            handleResolveTicket(ticketId) {
+
+            resolveTicket() {
+                const ticketId = this.DOM.resolveBtn.dataset.id;
                 const resolutionText = document.getElementById('manager-resolution').value.trim();
+
                 if (!resolutionText) {
-                    alert("Vui lòng nhập tóm tắt giải quyết trước khi bấm 'Giải quyết Ticket'.");
+                    alert("Vui lòng nhập tóm tắt giải quyết trước khi đóng ticket.");
                     return;
                 }
 
-                const ticketIndex = MOCK_DATA.tickets.findIndex(t => t.id === ticketId);
-                if (ticketIndex !== -1) {
-                    MOCK_DATA.tickets[ticketIndex].status = 'resolved';
-                    MOCK_DATA.tickets[ticketIndex].resolution = resolutionText;
-                    
-                    this.loadTicketData(); 
-                    this.closeTicketModal();
-
-                    console.log(`Ticket ${ticketId} đã được giải quyết bởi Manager.`);
-                    alert(`✅ Ticket ${ticketId} đã được giải quyết thành công.`);
+                const ticket = MOCK_DATA.tickets.find(t => t.id === ticketId);
+                if (ticket) {
+                    ticket.status = 'resolved';
+                    console.log(`Ticket ${ticketId} đã được giải quyết: ${resolutionText}`);
+                    alert(`✅ Đã giải quyết Ticket ${ticketId} thành công.`);
+                    this.closeModal();
+                    this.renderTickets();
+                    ManagerDashboardApp.loadDashboardSummary();
                 }
-            },
-            
-            bindEvents() {
-                // Filters
-                this.DOM.statusFilter.addEventListener('change', () => this.loadTicketData());
-                this.DOM.typeFilter.addEventListener('change', () => this.loadTicketData());
-
-                // Table Click (View Button)
-                this.DOM.ticketManagementSection.addEventListener('click', (e) => {
-                    const viewBtn = e.target.closest('.view-ticket-btn');
-                    if (viewBtn) this.openTicketModal(viewBtn.dataset.ticketId);
-                });
-                
-                // Modal Close/Resolve
-                this.DOM.closeBtn.addEventListener('click', () => this.closeTicketModal());
-                this.DOM.closeTicketBtn.addEventListener('click', () => this.closeTicketModal());
-                this.DOM.resolveBtn.addEventListener('click', (e) => {
-                    const ticketId = e.currentTarget.dataset.ticketId;
-                    this.handleResolveTicket(ticketId);
-                });
             }
         },
 
         // ==================================================================
-        // MODULE QUẢN LÝ THÔNG BÁO (ANNOUNCEMENTS)
+        // MODULE THÔNG BÁO (Giữ nguyên)
         // ==================================================================
-        Announcements: {
-            parent: null,
-            init(parent) {
-                this.parent = parent;
+        AnnouncementManagement: {
+            init() {
                 this.DOM = {
-                    tableBody: document.getElementById('announcements-table-body'),
                     form: document.getElementById('announcement-form'),
-                    titleInput: document.getElementById('announcement-title'),
-                    contentInput: document.getElementById('announcement-content'),
-                    recipientsSelect: document.getElementById('announcement-recipients'),
-                    announcementSection: document.getElementById('announcements')
+                    tableBody: document.getElementById('announcements-table-body'),
                 };
-                if (!this.DOM.tableBody) return;
-                this.render();
                 this.bindEvents();
-            },
-            
-            getRecipientText(role) {
-                switch (role) {
-                    case 'all': return 'Tất cả';
-                    case 'lec': return 'Giảng viên';
-                    case 'tc': return 'Tư vấn';
-                    case 'cs': return 'CS Học viên';
-                    default: return role.toUpperCase();
-                }
+                this.renderAnnouncements();
             },
 
-            render() {
+            bindEvents() {
+                this.DOM.form.addEventListener('submit', (e) => this.handleSubmit(e));
+                this.DOM.tableBody.addEventListener('click', (e) => this.handleTableActions(e));
+            },
+
+            renderAnnouncements() {
                 this.DOM.tableBody.innerHTML = '';
-                // Clone array để không làm thay đổi thứ tự trong MOCK_DATA
-                const announcements = [...MOCK_DATA.announcements].reverse(); // Hiển thị thông báo mới nhất lên đầu
                 
-                if (announcements.length === 0) {
-                     this.DOM.tableBody.innerHTML = `<tr><td colspan="6" style="text-align:center;">Chưa có thông báo nào được gửi.</td></tr>`;
-                    return;
-                }
+                const sortedAnnouncements = MOCK_DATA.announcements.sort((a, b) => Helpers.parseDateForSort(b.date) - Helpers.parseDateForSort(a.date));
 
-                announcements.forEach(announcement => {
+                sortedAnnouncements.forEach(ann => {
                     const row = this.DOM.tableBody.insertRow();
-                    row.insertCell().textContent = announcement.id;
-                    row.insertCell().textContent = announcement.title;
-                    row.insertCell().textContent = this.getRecipientText(announcement.recipient);
-                    row.insertCell().textContent = announcement.sender;
-                    row.insertCell().textContent = announcement.date;
-
-                    const actionCell = row.insertCell();
-                    actionCell.innerHTML = `
-                        <button class="btn btn-secondary btn-sm view-announcement-btn" data-id="${announcement.id}">
-                            <i class="fas fa-search"></i> Xem
-                        </button>
+                    row.innerHTML = `
+                        <td>${ann.id}</td>
+                        <td>${ann.title}</td>
+                        <td>${Helpers.getRoleDisplay(ann.recipient)}</td>
+                        <td>${ann.sender}</td>
+                        <td>${ann.date}</td>
+                        <td>
+                            <button class="btn btn-danger btn-sm delete-btn" data-id="${ann.id}"><i class="fas fa-trash"></i> Xóa</button>
+                        </td>
                     `;
                 });
             },
-            
-            handleFormSubmit(e) {
-                e.preventDefault();
-                
-                const newId = MOCK_DATA.announcements.length + 1;
-                const newAnnouncement = {
-                    id: newId,
-                    title: this.DOM.titleInput.value.trim(),
-                    content: this.DOM.contentInput.value.trim(),
-                    recipient: this.DOM.recipientsSelect.value,
-                    sender: 'Admin Manager', // Giả định Manager là người gửi
-                    date: new Date().toLocaleDateString('vi-VN')
-                };
-                
-                MOCK_DATA.announcements.push(newAnnouncement); // Thêm vào cuối để giữ id tăng dần
-                this.render(); // Render sẽ tự reverse
-                this.DOM.form.reset();
-                
-                console.log('Thông báo mới đã được gửi:', newAnnouncement);
-                alert(`✅ Gửi thông báo [${newAnnouncement.title}] đến ${this.getRecipientText(newAnnouncement.recipient)} thành công!`);
-            },
-            
-            handleViewAnnouncement(id) {
-                const announcement = MOCK_DATA.announcements.find(a => a.id == id);
-                if (announcement) {
-                    alert(`
-                        CHI TIẾT THÔNG BÁO:
-                        - ID: ${announcement.id}
-                        - Tiêu đề: ${announcement.title}
-                        - Người nhận: ${this.getRecipientText(announcement.recipient)}
-                        - Ngày gửi: ${announcement.date}
-                        
-                        Nội dung:
-                        ${announcement.content}
-                    `);
-                }
-            },
-            
-            bindEvents() {
-                this.DOM.form.addEventListener('submit', (e) => this.handleFormSubmit(e));
 
-                this.DOM.tableBody.addEventListener('click', (e) => {
-                    const viewBtn = e.target.closest('.view-announcement-btn');
-                    if (viewBtn) this.handleViewAnnouncement(viewBtn.dataset.id);
-                });
+            handleSubmit(e) {
+                e.preventDefault();
+                const formData = new FormData(this.DOM.form);
+                const data = Object.fromEntries(formData.entries());
+
+                const newId = MOCK_DATA.announcements.length + 1;
+                const newDate = new Date().toLocaleDateString('vi-VN');
+                
+                const newAnn = {
+                    id: newId,
+                    title: data.title,
+                    content: data.content,
+                    recipient: data.recipients,
+                    sender: 'MGR01', // Giả định người gửi là Manager đang login
+                    date: newDate
+                };
+
+                MOCK_DATA.announcements.push(newAnn);
+                this.renderAnnouncements();
+                this.DOM.form.reset();
+                alert(`✅ Đã gửi thông báo ${newAnn.title} đến ${Helpers.getRoleDisplay(newAnn.recipient)}!`);
+            },
+            
+            handleTableActions(e) {
+                const target = e.target.closest('.delete-btn');
+                if (!target) return;
+                const annId = parseInt(target.dataset.id);
+
+                if (confirm(`Bạn có chắc chắn muốn xóa thông báo ID ${annId} không?`)) {
+                    MOCK_DATA.announcements = MOCK_DATA.announcements.filter(a => a.id !== annId);
+                    this.renderAnnouncements();
+                    alert(`Đã xóa thông báo ID ${annId}.`);
+                }
             }
         },
-        
+
         // ==================================================================
-        // MODULE QUẢN LÝ TRANG BÁO CÁO (Đã tích hợp biểu đồ)
+        // MODULE BÁO CÁO (Giữ nguyên)
         // ==================================================================
-        Reports: {
-            parent: null,
-            myChart: null, // Biến để lưu trữ biểu đồ
-            init(parent) {
-                this.parent = parent;
+        ReportManagement: {
+            chart: null,
+
+            init() {
                 this.DOM = {
-                    container: document.getElementById('reports'),
                     generateBtn: document.getElementById('generate-report-btn'),
                     resultsContainer: document.getElementById('report-results-container'),
-                    chartCanvas: document.getElementById('report-chart'),
                 };
-                if (!this.DOM.container) return;
                 this.bindEvents();
             },
+
             bindEvents() {
                 this.DOM.generateBtn.addEventListener('click', () => this.generateReport());
             },
+
             generateReport() {
-                const results = {
-                    newStudents: Math.floor(Math.random() * 20) + 5,
-                    newClasses: Math.floor(Math.random() * 5) + 1,
-                    attendanceRate: Math.floor(Math.random() * 15) + 85,
-                    resolvedTickets: MOCK_DATA.tickets.filter(t => t.status === 'resolved').length + Math.floor(Math.random() * 10), // Giả lập thêm
-                };
-                
-                this.DOM.resultsContainer.querySelector('#report-new-students').textContent = results.newStudents;
-                this.DOM.resultsContainer.querySelector('#report-new-classes').textContent = results.newClasses;
-                this.DOM.resultsContainer.querySelector('#report-attendance-rate').textContent = `${results.attendanceRate}%`;
-                this.DOM.resultsContainer.querySelector('#report-resolved-tickets').textContent = results.resolvedTickets;
-                
+                document.getElementById('report-new-students').textContent = MOCK_DATA.reports.newStudents;
+                document.getElementById('report-new-classes').textContent = MOCK_DATA.reports.newClasses;
+                document.getElementById('report-attendance-rate').textContent = MOCK_DATA.reports.attendanceRate + '%';
+                document.getElementById('report-resolved-tickets').textContent = MOCK_DATA.reports.resolvedTickets;
+
+                this.renderChart();
                 this.DOM.resultsContainer.classList.remove('hidden');
-
-                const chartData = {
-                    labels: ['7 ngày qua', '14 ngày qua', '21 ngày qua', '30 ngày qua'],
-                    datasets: [{
-                        label: 'Học viên mới',
-                        data: [
-                            Math.floor(results.newStudents * 0.4),
-                            Math.floor(results.newStudents * 0.6),
-                            Math.floor(results.newStudents * 0.8),
-                            results.newStudents
-                        ],
-                        backgroundColor: 'rgba(59, 130, 246, 0.5)',
-                        borderColor: 'rgba(59, 130, 246, 1)',
-                        borderWidth: 2,
-                        borderRadius: 5,
-                    }]
-                };
-                this.drawChart(chartData);
+                alert('✅ Báo cáo đã được tạo thành công!');
             },
-            drawChart(chartData) {
-                if (!this.DOM.chartCanvas) return;
-                const ctx = this.DOM.chartCanvas.getContext('2d');
-                if (this.myChart) this.myChart.destroy();
+            
+            renderChart() {
+                const ctx = document.getElementById('report-chart').getContext('2d');
+                
+                if (this.chart) {
+                    this.chart.destroy();
+                }
 
-                this.myChart = new Chart(ctx, {
+                this.chart = new Chart(ctx, {
                     type: 'bar',
-                    data: chartData,
+                    data: {
+                        labels: MOCK_DATA.reports.chartLabels,
+                        datasets: [{
+                            label: 'Số giờ dạy (Mô phỏng)',
+                            data: MOCK_DATA.reports.chartData,
+                            backgroundColor: 'rgba(74, 108, 247, 0.8)',
+                            borderColor: 'rgba(74, 108, 247, 1)',
+                            borderWidth: 1
+                        }]
+                    },
                     options: {
                         responsive: true,
-                        maintainAspectRatio: false,
-                        plugins: {
-                            title: { display: true, text: 'Thống kê số lượng học viên mới', font: { size: 16, family: 'Inter' }, padding: { bottom: 20 } },
-                            legend: { display: false }
-                        },
                         scales: {
-                            y: { beginAtZero: true, grid: { color: '#e5e7eb' } },
-                            x: { grid: { display: false } }
+                            y: {
+                                beginAtZero: true
+                            }
                         }
                     }
                 });
