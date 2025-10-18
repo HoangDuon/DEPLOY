@@ -29,13 +29,18 @@ roles = [
         ("Lecturer One", "lec1@lms.com"),
         ("Lecturer Two", "lec2@lms.com")
     ]),
+    ("student", [
+        ("Student One", "student1@lms.com"),
+        ("Student Two", "student2@lms.com")
+    ]),
 ]
 
 role_id = {
     "manager": 1,
     "tc": 2,
     "cs": 3,
-    "lec": 4
+    "lec": 4,
+    "student": 5
 }
 
 for role_name, users in roles:

@@ -1,4 +1,6 @@
+from typing import List, Optional
 from pydantic import BaseModel, Field
+from app.schemas.notification_schema import NotificationRespone
 
 class LoginRequest(BaseModel):
     username: str = Field(..., example="manager")
@@ -18,11 +20,33 @@ class TokenResponse(BaseModel):
     user_id: int
     user_name: str
     user_role: str
+    notifications: Optional[List[NotificationRespone]] = None
 
 class UserInfo(BaseModel):
-    id: int
     username: str
-    role: str
+    email: str
 
     class Config:
         from_attributes = True
+
+class TicketCreateRequest(BaseModel):
+    user_id: int
+    user_assigned: int
+    title: str
+    issue_type: str
+    description: str
+    status: Optional[str] = "open"
+    created_at: Optional[str] = None
+
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "user_id": 3,
+                "user_assigned": 1,
+                "title": "Lỗi phân công lớp học",
+                "issue_type": "System Bug",
+                "description": "Không thể phân công giảng viên cho lớp LEC102.",
+                "status": "open",
+                "created_at": "2025-10-20T10:30:00Z"
+            }
+        }
