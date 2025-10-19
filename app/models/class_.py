@@ -22,4 +22,3 @@ class Class(Base):
     lecturer = relationship("Lecturer", back_populates="classes")
     creator = relationship("User", back_populates="created_classes")
     assignments = relationship("ClassAssignment", back_populates="class_")
-    materials = relationship("TeachingMaterial", back_populates="class_")

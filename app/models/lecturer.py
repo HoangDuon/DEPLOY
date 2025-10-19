@@ -12,4 +12,3 @@ class Lecturer(Base):
 
     user = relationship("User", back_populates="lecturer")
     classes = relationship("Class", back_populates="lecturer")
-    materials = relationship("TeachingMaterial", back_populates="lecturer")

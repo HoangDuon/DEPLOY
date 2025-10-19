@@ -20,7 +20,6 @@ class TokenResponse(BaseModel):
     user_id: int
     user_name: str
     user_role: str
-    notifications: Optional[List[NotificationRespone]] = None
 
 class UserInfo(BaseModel):
     username: str

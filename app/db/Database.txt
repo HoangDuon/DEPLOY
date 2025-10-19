@@ -114,10 +114,15 @@ CREATE TABLE GRADES (
     grade_id INT AUTO_INCREMENT PRIMARY KEY,
     assignment_id INT NOT NULL,
     grade FLOAT NOT NULL CHECK (grade BETWEEN 0 AND 10),
+    grade_type ENUM('process', 'project') NOT NULL,
     remarks TEXT,
     FOREIGN KEY (assignment_id) REFERENCES CLASS_ASSIGNMENTS(assignment_id)
-        ON UPDATE CASCADE ON DELETE CASCADE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+        ON UPDATE CASCADE 
+        ON DELETE CASCADE
+) ENGINE=InnoDB 
+DEFAULT CHARSET=utf8mb4 
+COLLATE=utf8mb4_unicode_ci;
+
 
 -- ==========================
 -- 🔟 TICKETS
@@ -260,12 +265,16 @@ VALUES
 (3, 2);
 
 -- GRADES
-INSERT INTO GRADES (assignment_id, grade, remarks)
+INSERT INTO GRADES (assignment_id, grade, grade_type, remarks)
 VALUES
-(1, 9.0, 'Hoàn thành bài tập tốt, hiểu rõ cú pháp Python cơ bản.'),
-(2, 8.5, 'Hiểu Java khá tốt, cần luyện thêm phần OOP.'),
-(3, 7.8, 'Chưa nắm chắc phần phân tích yêu cầu.'),
-(4, 9.5, 'Bài kiểm tra xuất sắc, trình bày rõ ràng.');
+(1, 9.0, 'process', 'Hoàn thành bài tập tốt, hiểu rõ cú pháp Python cơ bản.'),
+(1, 9.2, 'project', 'Xây dựng project nhỏ hoàn chỉnh.'),
+(2, 8.5, 'process', 'Hiểu Java khá tốt, cần luyện thêm phần OOP.'),
+(2, 8.8, 'project', 'Bài đồ án hoàn chỉnh, trình bày chuyên nghiệp.'),
+(3, 7.8, 'process', 'Chưa nắm chắc phần phân tích yêu cầu.'),
+(3, 8.3, 'project', 'Đồ án khá tốt, nhưng thiếu một vài tính năng.'),
+(4, 9.5, 'process', 'Tham gia đầy đủ, hiểu sâu kiến thức.'),
+(4, 9.8, 'project', 'Bài kiểm tra xuất sắc, trình bày rõ ràng.');
 
 -- ATTENDANCE
 INSERT INTO ATTENDANCE (assignment_id, date, status)

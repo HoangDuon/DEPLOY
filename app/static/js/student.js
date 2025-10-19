@@ -1,5 +1,7 @@
 document.addEventListener('DOMContentLoaded', () => {
     
+    console.log(sessionStorage.getItem("loggedInUser"));
+
     // ==================================================================
     // DỮ LIỆU MẪU (MOCK DATA) - ĐÃ CẬP NHẬT
     // ==================================================================

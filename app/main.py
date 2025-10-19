@@ -1,14 +1,21 @@
 from fastapi import FastAPI
-# from app.api import routes_manager, routes_lec, routes_cs, routes_tc, routes_auth
+from fastapi.middleware.cors import CORSMiddleware
 from app.api import routes_auth, routes_notification, routes_student
 from app.db import database
-# from app.db import base
 from app.core.config import settings
 
 # Khởi tạo database
 database.Base.metadata.create_all(bind=database.engine)
 
 app = FastAPI(title=settings.PROJECT_NAME)
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # hoặc ["http://localhost:3000"]
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 @app.get("/")
 def read_root():

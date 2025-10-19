@@ -11,6 +11,7 @@ class ClassInfo(BaseModel):
         from_attributes = True
 
 class GradeInfo(BaseModel):
+    grade_type: str
     grade: Optional[float] = None
     remarks: Optional[str] = None
 

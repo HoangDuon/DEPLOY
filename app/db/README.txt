@@ -10,3 +10,6 @@ Database Ver1:
     - Thêm cột title vào bảng TICKET (đã sửa code trong Database.txt)
     - Bỏ bảng TEACHING_MATERIALS (đã sửa code trong Database.txt)
     - Thêm cột user_id vào bảng STUDENTS (đã sửa code trong Database.txt)
+
+Database Ver2:
+    - Thêm cột grade_type vào bảng GRADES (đã sửa code trong Database.txt)

@@ -8,16 +8,6 @@ document.addEventListener('DOMContentLoaded', () => {
             togglePasswordIcon: document.getElementById('toggle-password'),
         },
 
-        data: {
-            mockUsers: [
-                { username: 'manager', password: '123456', role: 'manager', fullName: 'Admin Manager' },
-                { username: 'tc', password: '123456', role: 'tc', fullName: 'Trần Thị TC' },
-                { username: 'lec', password: '123456', role: 'lec', fullName: 'Lê Văn Giáo Viên' },
-                { username: 'cs', password: '123456', role: 'cs', fullName: 'Nguyễn Hữu CS' },
-                { username: 'student', password: '123456', role: 'student', fullName: 'Nguyễn Hữu Student' },
-            ]
-        },
-
         init() {
             const storedUser = sessionStorage.getItem('loggedInUser');
             if (storedUser) {
@@ -35,19 +25,39 @@ document.addEventListener('DOMContentLoaded', () => {
             this.DOM.togglePasswordIcon.addEventListener('click', () => this.togglePasswordVisibility());
         },
 
-        handleLogin(e) {
+        async handleLogin(e) {
             e.preventDefault();
             const username = this.DOM.usernameInput.value.trim();
             const password = this.DOM.passwordInput.value;
 
-            const foundUser = this.data.mockUsers.find(
-                user => user.username === username && user.password === password
-            );
+            try {
+                const login_respone = await fetch("http://127.0.0.1:8000/auth/login", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json"},
+                    body: JSON.stringify({username: username, password: password})
+                });
 
-            if (foundUser) {
-                this.onLoginSuccess(foundUser);
-            } else {
-                this.onLoginFailure();
+                if (!login_respone.ok) {
+                    const errorDate = await login_respone.json();
+                    throw new Error("Tên đăng nhập hoặc mật khẩu không đúng" || errorDate.detail);
+                }
+
+                const data = await login_respone.json();
+
+                sessionStorage.setItem("accessToken", data.access_token);
+
+                const state = {
+                    id: data.user_id,
+                    fullName: data.user_name,
+                    role: data.user_role
+                };
+
+                sessionStorage.setItem("loggedInUser", JSON.stringify(state))
+
+                this.redirectToRoleDashboard(data.user_role);
+            } catch (error) {
+                console.error("Login error:", err);
+                this.onLoginFailure(err.message);
             }
         },
 

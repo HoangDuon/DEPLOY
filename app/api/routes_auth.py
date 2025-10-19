@@ -23,16 +23,12 @@ def login(data: LoginRequest) -> TokenResponse:
 
     token = create_access_token({"sub": user_name, "role": role_name})
 
-    notifications = get_all_notifications()
-    notification_responses = [NotificationRespone.model_validate(notification) for notification in notifications]
-
     return TokenResponse(
         access_token = token, 
         token_type = "bearer",
         user_id = user_id,
         user_name = user_name,
         user_role = role_name,
-        notifications = notification_responses
     )
 
 # Get User Info by user_id

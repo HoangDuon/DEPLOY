@@ -6,7 +6,6 @@ from app.models.class_ import Class
 from app.models.class_assignment import ClassAssignment
 from app.models.attendance import Attendance
 from app.models.grade import Grade
-from app.models.teaching_material import TeachingMaterial
 from app.models.ticket import Ticket
 from app.models.report import Report
 from app.models.notification import Notification

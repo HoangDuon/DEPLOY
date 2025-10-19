@@ -35,7 +35,7 @@ def get_classes_for_student(user_id: int):
 
     return classes
 
-@router.get("/class/grade", response_model= GradeInfo)
+@router.get("/class/grade", response_model= list[GradeInfo])
 def get_classGrade_for_student(class_assigment_id: int):
     grade = get_classes_grades_of_student(class_assigment_id)
 
