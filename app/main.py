@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.api import routes_auth, routes_notification, routes_student
-# from app.api import routes_lec, routes_cs, routes_tc, routes_auth
+from app.api import routes_customer_support
 from app.api import routes_manager
 from app.api import routes_auth
 from app.api import routes_auth, routes_notification, routes_student, routes_lecturer, routes_teacher_coordinator
@@ -36,5 +36,5 @@ app.include_router(routes_notification.router, prefix="/notify", tags=["Notifica
 app.include_router(routes_student.router, prefix="/student", tags=["Student"])
 app.include_router(routes_manager.router, prefix="/manager", tags=["Manager"])
 app.include_router(routes_lecturer.router, prefix="/lec", tags=["Lecturer"])
-# app.include_router(routes_cs.router, prefix="/cs", tags=["Customer Support"])
+app.include_router(routes_customer_support.router, prefix="/cs", tags=["Customer Support"])
 app.include_router(routes_teacher_coordinator.router, prefix="/tc", tags=["Teacher Coordinator"])
