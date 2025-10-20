@@ -4,6 +4,7 @@ from app.api import routes_auth, routes_notification, routes_student
 # from app.api import routes_lec, routes_cs, routes_tc, routes_auth
 from app.api import routes_manager
 from app.api import routes_auth
+from app.api import routes_auth, routes_notification, routes_student, routes_lecturer, routes_teacher_coordinator
 from app.db import database
 from app.core.config import settings
 
@@ -12,9 +13,14 @@ database.Base.metadata.create_all(bind=database.engine)
 
 app = FastAPI(title=settings.PROJECT_NAME)
 
+origins = [
+    "http://127.0.0.1:5500",
+    "http://localhost:5500"
+]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # hoặc ["http://localhost:3000"]
+    allow_origins=origins,  # hoặc ["http://localhost:3000"]
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -29,6 +35,6 @@ app.include_router(routes_auth.router, prefix="/auth", tags=["Auth"])
 app.include_router(routes_notification.router, prefix="/notify", tags=["Notification"])
 app.include_router(routes_student.router, prefix="/student", tags=["Student"])
 app.include_router(routes_manager.router, prefix="/manager", tags=["Manager"])
-# app.include_router(routes_lec.router, prefix="/lec", tags=["Lecturer"])
+app.include_router(routes_lecturer.router, prefix="/lec", tags=["Lecturer"])
 # app.include_router(routes_cs.router, prefix="/cs", tags=["Customer Support"])
-# app.include_router(routes_tc.router, prefix="/tc", tags=["Training Coordinator"])
+app.include_router(routes_teacher_coordinator.router, prefix="/tc", tags=["Teacher Coordinator"])

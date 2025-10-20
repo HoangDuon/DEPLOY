@@ -13,3 +13,8 @@ Database Ver1:
 
 Database Ver2:
     - Thêm cột grade_type vào bảng GRADES (đã sửa code trong Database.txt)
+
+Database Ver3:
+    - Thêm cột status = 'pending' vào bảng CLASSES (đã sửa code trong Database.txt)
+    - Thêm cột place vào CLASSES (đã sửa code trong Database.txt)
+    - Sửa cột schedule thành datetime (đã sửa code trong Database.txt)
