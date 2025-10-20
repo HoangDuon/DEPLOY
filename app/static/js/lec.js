@@ -1,7 +1,7 @@
 document.addEventListener('DOMContentLoaded', () => {
 
     // ==================================================================
-    // DỮ LIỆU MẪU (MOCK DATA)
+    // DỮ LIỆU MẪU (MOCK DATA) - ĐÃ CẬP NHẬT
     // ==================================================================
     const MOCK_DATA = {
         dashboardSummary: { monthlyHoursCompleted: 52, currentClassesCount: 2, pendingTicketsCount: 1 },
@@ -43,7 +43,12 @@ document.addEventListener('DOMContentLoaded', () => {
         tickets: [ 
             { id: 'TLEC001', type: 'Xin đổi lịch/nghỉ', title: 'Xin đổi lịch dạy lớp PY101', status: 'pending', date: '14/10/2025', relatedId: 'PY101' },
             { id: 'TLEC002', type: 'Vấn đề Kỹ thuật', title: 'Lỗi upload tài liệu lớp FE301', status: 'resolved', date: '13/10/2025', relatedId: 'FE301' },
-        ]
+        ],
+        announcements: [ // Dữ liệu thông báo MỚI
+            { id: 1, title: 'Lưu ý: Hạn chót nộp điểm cuối kỳ', content: 'Giáo viên cần hoàn thành nhập điểm trước ngày 25/10/2025.', date: '2025-10-17T08:00:00Z', role: 'lec' },
+            { id: 2, title: 'Thông báo nghỉ lễ Giáng sinh', content: 'Tất cả các lớp sẽ nghỉ từ ngày 24/12 đến hết 26/12.', date: '2025-09-01T10:00:00Z', role: 'all' },
+            { id: 3, title: 'Đào tạo công nghệ mới', content: 'Buổi đào tạo về VR/AR sẽ diễn ra vào Thứ Sáu tuần này.', date: '2025-10-15T15:30:00Z', role: 'lec' },
+        ],
     };
 
     const LecturerDashboardApp = {
@@ -82,11 +87,88 @@ document.addEventListener('DOMContentLoaded', () => {
 
         init() {
             this.loadDashboardSummary();
+            this.DashboardUI.init(this); // KHỞI TẠO TAB TỔNG QUAN
             this.Calendar.init(this);
             this.MyClasses.init(this);
             this.TicketManagement.init(this); 
         },
         
+        // ==================================================================
+        // MODULE QUẢN LÝ UI TỔNG QUAN (MỚI)
+        // ==================================================================
+        DashboardUI: {
+            parent: null,
+            init(parent) {
+                this.parent = parent;
+                this.DOM = {
+                    tabs: document.querySelectorAll('.dashboard-tab'),
+                    scheduleView: document.getElementById('schedule-view'),
+                    announcementsView: document.getElementById('announcements-view'),
+                    announcementsList: document.getElementById('announcements-list'),
+                };
+                if (this.DOM.tabs.length === 0) return; // Chỉ chạy khi có tabs
+                this.bindEvents();
+                this.loadAnnouncements();
+            },
+
+            loadAnnouncements() {
+                // 1. Lọc và sắp xếp thông báo
+                const relevantAnnouncements = MOCK_DATA.announcements
+                    .filter(a => a.role === 'lec' || a.role === 'all')
+                    .sort((a, b) => new Date(b.date) - new Date(a.date)); // Sort gần nhất đến xa nhất
+
+                this.DOM.announcementsList.innerHTML = '';
+
+                if (relevantAnnouncements.length === 0) {
+                    this.DOM.announcementsList.innerHTML = '<p style="padding: 15px; text-align: center;">Hiện chưa có thông báo mới nào.</p>';
+                    return;
+                }
+
+                // 2. Render ra UI
+                relevantAnnouncements.forEach(ann => {
+                    const dateObj = new Date(ann.date);
+                    const formattedDate = `${dateObj.toLocaleDateString('vi-VN')} ${dateObj.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}`;
+                    
+                    const announcementHTML = `
+                        <div class="card announcement-card" style="margin-bottom: 15px; border-left: 5px solid #4a6cf7;">
+                            <h4>${ann.title}</h4>
+                            <p style="margin-bottom: 5px;">${ann.content}</p>
+                            <small style="color: #6c757d;"><i class="fas fa-clock"></i> ${formattedDate}</small>
+                        </div>
+                    `;
+                    this.DOM.announcementsList.insertAdjacentHTML('beforeend', announcementHTML);
+                });
+            },
+
+            switchTab(targetTab) {
+                this.DOM.tabs.forEach(btn => {
+                    btn.classList.toggle('active', btn.dataset.tab === targetTab);
+                });
+
+                this.DOM.scheduleView.classList.toggle('active', targetTab === 'schedule-view');
+                this.DOM.scheduleView.classList.toggle('hidden', targetTab !== 'schedule-view');
+
+                this.DOM.announcementsView.classList.toggle('active', targetTab === 'announcements-view');
+                this.DOM.announcementsView.classList.toggle('hidden', targetTab !== 'announcements-view');
+                
+                // Đảm bảo lịch được render lại khi chuyển về tab Schedule
+                if (targetTab === 'schedule-view') {
+                    this.parent.Calendar.render();
+                }
+            },
+
+            bindEvents() {
+                this.DOM.tabs.forEach(btn => {
+                    btn.addEventListener('click', (e) => {
+                        this.switchTab(e.currentTarget.dataset.tab);
+                    });
+                });
+            }
+        },
+
+        // ==================================================================
+        // MODULE CALENDAR (SCHEDULE)
+        // ==================================================================
         Calendar: {
             parent: null,
             isRegistrationMode: false, 
@@ -106,9 +188,12 @@ document.addEventListener('DOMContentLoaded', () => {
                     cancelBtn: document.getElementById('cancel-confirm-btn'),
                     closeBtn: document.getElementById('close-confirm-modal-btn'),
                 };
-                if (!this.DOM.scheduleBody) return;
-                this.bindEvents();
-                this.render();
+                // Dùng setTimeout để đảm bảo các partials đã load xong và các phần tử tồn tại
+                setTimeout(() => {
+                    if (!this.DOM.scheduleBody) return;
+                    this.bindEvents();
+                    this.render();
+                }, 0);
             },
 
             bindEvents() {
@@ -156,7 +241,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 const weekDates = Array.from({ length: 7 }).map((_, i) => { const day = new Date(new Date(monday).setDate(monday.getDate() + i)); return `${day.getFullYear()}-${(day.getMonth() + 1).toString().padStart(2, '0')}-${day.getDate().toString().padStart(2, '0')}`; });
                 const sunday = new Date(new Date(monday).setDate(monday.getDate() + 6));
                 const formatDate = (d) => `${d.getDate().toString().padStart(2, '0')}/${(d.getMonth() + 1).toString().padStart(2, '0')}`;
-                this.DOM.weekDisplay.textContent = `Tuần: ${formatDate(monday)} - ${formatDate(sunday)}`;
+                
+                if (this.DOM.weekDisplay) { // Check if element exists
+                    this.DOM.weekDisplay.textContent = `Tuần: ${formatDate(monday)} - ${formatDate(sunday)}`;
+                }
+                
                 this.DOM.scheduleBody.querySelectorAll('.day-column').forEach(col => col.innerHTML = '');
                 
                 const dataSource = this.isRegistrationMode ? MOCK_DATA.availableClasses : MOCK_DATA.events;
@@ -167,7 +256,9 @@ document.addEventListener('DOMContentLoaded', () => {
             drawEvents(events, isAvailable = false) {
                 const startHour = 7;
                 const totalHours = 16;
-                const hourHeight = this.DOM.scheduleBody.offsetHeight / totalHours;
+                // Cần đảm bảo scheduleBody có chiều cao khi được hiển thị
+                const hourHeight = 40; // Đặt cố định 40px/giờ cho mô phỏng
+                // const hourHeight = this.DOM.scheduleBody.offsetHeight / totalHours; // Dễ bị lỗi 0 nếu tab chưa active
 
                 const timeToDecimal = (t) => { const [h, m] = t.split(':'); return Number(h) + Number(m) / 60; };
                 const dayMap = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
@@ -216,7 +307,17 @@ document.addEventListener('DOMContentLoaded', () => {
                 const classIndex = MOCK_DATA.availableClasses.findIndex(c => c.id === classId);
                 if (classIndex === -1) return;
                 const claimedClass = MOCK_DATA.availableClasses.splice(classIndex, 1)[0];
-                MOCK_DATA.myClasses.push(claimedClass);
+                
+                // Thêm thông tin cần thiết vào lớp mới được nhận (nếu cần)
+                MOCK_DATA.myClasses.push({
+                    id: claimedClass.id,
+                    name: claimedClass.className, // Dùng className thay vì name
+                    students: claimedClass.students,
+                    maxStudents: claimedClass.maxStudents,
+                    startDate: claimedClass.startDate,
+                    status: 'active'
+                });
+                
                 this.parent.MyClasses.loadMyClasses(); 
                 this.parent.MyClasses.AvailableClassManagement.render(MOCK_DATA.availableClasses); 
                 this.parent.loadDashboardSummary();
@@ -227,6 +328,9 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         },
 
+        // ==================================================================
+        // MODULE MY CLASSES
+        // ==================================================================
         MyClasses: {
             parent: null,
             init(parent) {
@@ -261,8 +365,12 @@ document.addEventListener('DOMContentLoaded', () => {
                 
                 classListView.addEventListener('click', (e) => {
                     if (e.target.closest('.enter-class-btn')) {
+                        // Cần lấy class ID để hiển thị chi tiết lớp đó
+                        const classId = e.target.closest('.enter-class-btn').dataset.classId;
                         classListView.style.display = 'none';
                         classDetailView.style.display = 'block';
+                        // TODO: Gọi hàm render chi tiết lớp (Điểm danh, Điểm, Tài liệu) dựa trên classId
+                        classDetailView.querySelector('h2').textContent = `Chi tiết lớp học: ${classId}`;
                     }
                 });
                 
@@ -287,7 +395,7 @@ document.addEventListener('DOMContentLoaded', () => {
             setupAttendanceFeature() {
                 const sessionSelector = this.DOM.container.querySelector('#session-selector');
                 const tableBody = this.DOM.container.querySelector('#attendance-table-body');
-                if (!sessionSelector || !tableBody) return;
+                if (!sessionSelector || !tableBody || !MOCK_DATA.classDetails['PY101']) return;
 
                 const currentClass = MOCK_DATA.classDetails['PY101'];
                 sessionSelector.innerHTML = '';
@@ -385,7 +493,17 @@ document.addEventListener('DOMContentLoaded', () => {
                     const classIndex = MOCK_DATA.availableClasses.findIndex(c => c.id === this.selectedClassId);
                     if (classIndex === -1) return;
                     const assignedClass = MOCK_DATA.availableClasses.splice(classIndex, 1)[0];
-                    MOCK_DATA.myClasses.push(assignedClass);
+                    
+                    // Thêm thông tin cần thiết vào lớp mới được nhận
+                    MOCK_DATA.myClasses.push({
+                        id: assignedClass.id,
+                        name: assignedClass.className || assignedClass.name,
+                        students: assignedClass.students,
+                        maxStudents: assignedClass.maxStudents,
+                        startDate: assignedClass.startDate,
+                        status: 'active'
+                    });
+
                     this.parent.parent.MyClasses.loadMyClasses(); 
                     this.render(MOCK_DATA.availableClasses);
                     this.parent.parent.loadDashboardSummary();
@@ -396,6 +514,9 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         },
         
+        // ==================================================================
+        // MODULE TICKET MANAGEMENT
+        // ==================================================================
         TicketManagement: {
             parent: null,
             init(parent) {

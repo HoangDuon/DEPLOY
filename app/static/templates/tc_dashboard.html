@@ -292,6 +292,56 @@
                         </table>
                     </div>
                 </section>
+
+                <section id="announcements" class="content-section">
+                    <h2>Thông báo</h2>
+                    
+                    <div class="form-box card" style="margin-bottom: 30px;">
+                        <h3>Soạn thông báo mới</h3>
+                        <form id="announcement-form">
+                            <div class="form-group">
+                                <label for="announcement-title">Tiêu đề</label>
+                                <input type="text" id="announcement-title" name="title" class="form-control" required placeholder="Nhập tiêu đề thông báo...">
+                            </div>
+                            <div class="form-group">
+                                <label for="announcement-content">Nội dung</label>
+                                <textarea id="announcement-content" name="content" rows="5" class="form-control" required placeholder="Nhập nội dung chi tiết..."></textarea>
+                            </div>
+                            <div class="form-group">
+                                <label for="announcement-recipients">Người nhận</label>
+                                <select id="announcement-recipients" name="recipients" class="form-control">
+                                    <option value="all">Tất cả người dùng</option>
+                                    <option value="lec">Giảng viên (LEC)</option>
+                                    <option value="cs">Chăm sóc học viên (CS)</option>
+                                    <option value="student">Học viên (Student)</option>
+                                </select>
+                            </div>
+                            <div class="form-footer" style="padding-top: 15px; border-top: 1px solid #e2e8f0;">
+                                <button id="submit-announcement-btn" type="submit" class="btn btn-primary">
+                                    Gửi thông báo
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+
+                    <div class="table-container">
+                        <h3>Lịch sử thông báo đã gửi</h3>
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>ID</th>
+                                    <th>Tiêu đề</th>
+                                    <th>Người nhận</th>
+                                    <th>Người gửi</th>
+                                    <th>Ngày gửi</th>
+                                    <th>Hành động</th>
+                                </tr>
+                            </thead>
+                            <tbody id="announcements-table-body">
+                            </tbody>
+                        </table>
+                    </div>
+                </section>
                 </div>
         </main>
     </div>
@@ -344,6 +394,50 @@
                 <button id="lock-class-btn" class="btn btn-danger hidden"><i class="fas fa-lock"></i> Khoá lớp học</button>
                 <button id="cancel-class-modal-btn" class="btn btn-secondary">Hủy</button>
                 <button id="save-class-btn" type="submit" form="class-form" class="btn btn-primary">Lưu Lớp học</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="profile-modal-overlay" class="modal-overlay hidden">
+        <div class="modal" style="max-width: 500px;">
+            <div class="modal-header">
+                <h3 id="profile-modal-title">Thông tin Tài khoản</h3>
+                <span id="close-profile-modal-btn" class="close-modal">&times;</span>
+            </div>
+            <div class="modal-body">
+                
+                <div id="profile-info-display">
+                    <p><strong>Tên đăng nhập:</strong> <span id="profile-username"></span></p>
+                    <p><strong>Email:</strong> <span id="profile-email"></span></p>
+                </div>
+                
+                <div id="profile-edit-form" class="hidden">
+                    <div class="form-group">
+                        <label for="edit-username">Tên đăng nhập mới:</label>
+                        <input type="text" id="edit-username" class="form-control" disabled> 
+                    </div>
+                    <div class="form-group">
+                        <label for="edit-email">Email:</label>
+                        <input type="email" id="edit-email" class="form-control" disabled readonly>
+                    </div>
+                    
+                    <hr style="margin: 20px 0;">
+                    
+                    <div class="form-group">
+                        <label for="new-password">Mật khẩu mới:</label>
+                        <input type="password" id="new-password" class="form-control" placeholder="Để trống nếu không muốn đổi mật khẩu">
+                    </div>
+                    <div class="form-group">
+                        <label for="current-password">Mật khẩu hiện tại (BẮT BUỘC để lưu thay đổi):</label>
+                        <input type="password" id="current-password" class="form-control" placeholder="Nhập mật khẩu hiện tại" required>
+                    </div>
+                    <p class="text-danger hidden" id="password-error" style="color: red; font-size: 0.9em;">Mật khẩu không đúng.</p>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button id="cancel-profile-btn" class="btn btn-secondary">Đóng</button>
+                <!-- <button id="toggle-edit-profile-btn" class="btn btn-warning">Thay đổi thông tin</button>
+                <button id="save-profile-btn" class="btn btn-primary hidden">Lưu thay đổi</button> -->
             </div>
         </div>
     </div>

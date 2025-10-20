@@ -1,1 +1,293 @@
-File này chứa code SQL
+-- ============================================
+--  DATABASE: Internal LMS (Normalized + Compatible)
+--  Notes:
+--   ✅ utf8mb4_unicode_ci for all
+--   ✅ Fixed foreign key order & ENUM
+--   ✅ Ready for FastAPI + SQLAlchemy
+-- ============================================
+
+DROP DATABASE IF EXISTS lms_db;
+CREATE DATABASE lms_db
+  CHARACTER SET utf8mb4
+  COLLATE utf8mb4_unicode_ci;
+
+USE lms_db;
+
+-- ==========================
+-- 1️⃣ ROLES
+-- ==========================
+CREATE TABLE ROLES (
+    role_id INT AUTO_INCREMENT PRIMARY KEY,
+    role_name VARCHAR(50) NOT NULL UNIQUE,
+    description VARCHAR(255),
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ==========================
+-- 2️⃣ USERS
+-- ==========================
+CREATE TABLE USERS (
+    user_id INT AUTO_INCREMENT PRIMARY KEY,
+    name VARCHAR(100) NOT NULL,
+    email VARCHAR(100) NOT NULL UNIQUE,
+    password_hash VARCHAR(255) NOT NULL,
+    role_id INT NOT NULL,
+    status ENUM('active', 'deactivated') NOT NULL DEFAULT 'active',
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (role_id) REFERENCES ROLES(role_id)
+        ON UPDATE CASCADE ON DELETE RESTRICT
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ==========================
+-- 4️⃣ LECTURERS\
+-- ==========================
+CREATE TABLE LECTURERS (
+    lecturer_id INT AUTO_INCREMENT PRIMARY KEY,
+    user_id INT NOT NULL UNIQUE,
+    department VARCHAR(100),
+    total_hours INT DEFAULT 0,
+    FOREIGN KEY (user_id) REFERENCES USERS(user_id)
+        ON UPDATE CASCADE ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ==========================
+-- 5️⃣ CLASSES
+-- ==========================
+CREATE TABLE CLASSES (
+    class_id INT AUTO_INCREMENT PRIMARY KEY,
+    class_name VARCHAR(100) NOT NULL,
+    lecturer_id INT NOT NULL,
+    schedule VARCHAR(100) NOT NULL,
+    created_by INT NOT NULL,
+    status ENUM('active', 'archived') NOT NULL DEFAULT 'active',
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (lecturer_id) REFERENCES LECTURERS(lecturer_id)
+        ON UPDATE CASCADE ON DELETE RESTRICT,
+    FOREIGN KEY (created_by) REFERENCES USERS(user_id)
+        ON UPDATE CASCADE ON DELETE RESTRICT
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ==========================
+-- 3️⃣ STUDENTS
+-- ==========================
+CREATE TABLE STUDENTS (
+    student_id INT AUTO_INCREMENT PRIMARY KEY,
+    user_id INT NOT NULL UNIQUE,
+    enrollment_date DATE NOT NULL,
+    status ENUM('active', 'inactive') NOT NULL DEFAULT 'active',
+    FOREIGN KEY (user_id) REFERENCES USERS(user_id)
+        ON UPDATE CASCADE ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+
+-- ==========================
+-- 6️⃣ CLASS_ASSIGNMENTS
+-- ==========================
+CREATE TABLE CLASS_ASSIGNMENTS (
+    assignment_id INT AUTO_INCREMENT PRIMARY KEY,
+    class_id INT NOT NULL,
+    student_id INT NOT NULL,
+    UNIQUE (class_id, student_id),
+    FOREIGN KEY (class_id) REFERENCES CLASSES(class_id)
+        ON UPDATE CASCADE ON DELETE CASCADE,
+    FOREIGN KEY (student_id) REFERENCES STUDENTS(student_id)
+        ON UPDATE CASCADE ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ==========================
+-- 7️⃣ ATTENDANCE
+-- ==========================
+CREATE TABLE ATTENDANCE (
+    attendance_id INT AUTO_INCREMENT PRIMARY KEY,
+    assignment_id INT NOT NULL,
+    date DATE NOT NULL,
+    status ENUM('present', 'absent', 'late') NOT NULL,
+    FOREIGN KEY (assignment_id) REFERENCES CLASS_ASSIGNMENTS(assignment_id)
+        ON UPDATE CASCADE ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ==========================
+-- 8️⃣ GRADES
+-- ==========================
+CREATE TABLE GRADES (
+    grade_id INT AUTO_INCREMENT PRIMARY KEY,
+    assignment_id INT NOT NULL,
+    grade FLOAT NOT NULL CHECK (grade BETWEEN 0 AND 10),
+    grade_type ENUM('process', 'project') NOT NULL,
+    remarks TEXT,
+    FOREIGN KEY (assignment_id) REFERENCES CLASS_ASSIGNMENTS(assignment_id)
+        ON UPDATE CASCADE 
+        ON DELETE CASCADE
+) ENGINE=InnoDB 
+DEFAULT CHARSET=utf8mb4 
+COLLATE=utf8mb4_unicode_ci;
+
+
+-- ==========================
+-- 🔟 TICKETS
+-- ==========================
+CREATE TABLE TICKETS (
+    ticket_id INT AUTO_INCREMENT PRIMARY KEY,
+    submitted_by INT NOT NULL,
+    assigned_to INT,
+    issue_type VARCHAR(100) NOT NULL,
+    title VARCHAR(150) NOT NULL,
+    description TEXT NOT NULL,
+    status ENUM('open', 'in_progress', 'resolved') NOT NULL DEFAULT 'open',
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    resolved_at DATETIME NULL,
+    FOREIGN KEY (submitted_by) REFERENCES USERS(user_id)
+        ON UPDATE CASCADE ON DELETE CASCADE,
+    FOREIGN KEY (assigned_to) REFERENCES USERS(user_id)
+        ON UPDATE CASCADE ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ==========================
+-- 1️⃣1️⃣ REPORTS
+-- ==========================
+CREATE TABLE REPORTS (
+    report_id INT AUTO_INCREMENT PRIMARY KEY,
+    generated_by INT NOT NULL,
+    report_type VARCHAR(100) NOT NULL,
+    file_url VARCHAR(255) NOT NULL,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (generated_by) REFERENCES USERS(user_id)
+        ON UPDATE CASCADE ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ==========================
+-- 1️⃣2️⃣ NOTIFICATIONS
+-- ==========================
+CREATE TABLE NOTIFICATIONS (
+    notification_id INT AUTO_INCREMENT PRIMARY KEY,
+    user_id INT NOT NULL,
+    title VARCHAR(150) NOT NULL,
+    message TEXT NOT NULL,
+    is_read BOOLEAN NOT NULL DEFAULT FALSE,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES USERS(user_id)
+        ON UPDATE CASCADE ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ✅ Done
+
+-- ==========================
+-- 🔹 SEED DATA
+-- ==========================
+INSERT INTO ROLES (role_name, description, created_at)
+VALUES
+('manager', 'System Manager - quản trị toàn hệ thống', NOW()),
+('tc', 'Training Coordinator - điều phối đào tạo', NOW()),
+('cs', 'Customer Support - chăm sóc học viên', NOW()),
+('lec', 'Lecturer - giảng viên', NOW()),
+('student', 'Student - học viên', NOW());
+
+-- MANAGER (role_id = 1)
+INSERT INTO USERS (name, email, password_hash, role_id, status, created_at)
+VALUES ('Manager One', 'manager1@lms.com', '$2b$12$BARBagZbum3Bsok453JM0OJtrccGnZydq1MkkZ.jEUAEIUAf5GPhO', 1, 'active', '2025-10-16 17:58:19');
+INSERT INTO USERS (name, email, password_hash, role_id, status, created_at)
+VALUES ('Manager Two', 'manager2@lms.com', '$2b$12$BARBagZbum3Bsok453JM0OJtrccGnZydq1MkkZ.jEUAEIUAf5GPhO', 1, 'active', '2025-10-16 17:58:19');
+
+-- TC (role_id = 2)
+INSERT INTO USERS (name, email, password_hash, role_id, status, created_at)
+VALUES ('TC One', 'tc1@lms.com', '$2b$12$BARBagZbum3Bsok453JM0OJtrccGnZydq1MkkZ.jEUAEIUAf5GPhO', 2, 'active', '2025-10-16 17:58:19');
+INSERT INTO USERS (name, email, password_hash, role_id, status, created_at)
+VALUES ('TC Two', 'tc2@lms.com', '$2b$12$BARBagZbum3Bsok453JM0OJtrccGnZydq1MkkZ.jEUAEIUAf5GPhO', 2, 'active', '2025-10-16 17:58:19');
+
+-- CS (role_id = 3)
+INSERT INTO USERS (name, email, password_hash, role_id, status, created_at)
+VALUES ('CS One', 'cs1@lms.com', '$2b$12$BARBagZbum3Bsok453JM0OJtrccGnZydq1MkkZ.jEUAEIUAf5GPhO', 3, 'active', '2025-10-16 17:58:19');
+INSERT INTO USERS (name, email, password_hash, role_id, status, created_at)
+VALUES ('CS Two', 'cs2@lms.com', '$2b$12$BARBagZbum3Bsok453JM0OJtrccGnZydq1MkkZ.jEUAEIUAf5GPhO', 3, 'active', '2025-10-16 17:58:19');
+
+-- LEC (role_id = 4)
+INSERT INTO USERS (name, email, password_hash, role_id, status, created_at)
+VALUES ('Lecturer One', 'lec1@lms.com', '$2b$12$BARBagZbum3Bsok453JM0OJtrccGnZydq1MkkZ.jEUAEIUAf5GPhO', 4, 'active', '2025-10-16 17:58:19');
+INSERT INTO USERS (name, email, password_hash, role_id, status, created_at)
+VALUES ('Lecturer Two', 'lec2@lms.com', '$2b$12$BARBagZbum3Bsok453JM0OJtrccGnZydq1MkkZ.jEUAEIUAf5GPhO', 4, 'active', '2025-10-16 17:58:19');
+
+-- STUDENT (role_id = 5)
+INSERT INTO USERS (name, email, password_hash, role_id, status, created_at)
+VALUES ('Student One', 'student1@lms.com', '$2b$12$uOQbMFjZhq7gqZi2j6vtL.dZu/M11Z4rivqEWExbD.HNkTg2sfkwO', 5, 'active', '2025-10-18 16:07:30');
+INSERT INTO USERS (name, email, password_hash, role_id, status, created_at)
+VALUES ('Student Two', 'student2@lms.com', '$2b$12$uOQbMFjZhq7gqZi2j6vtL.dZu/M11Z4rivqEWExbD.HNkTg2sfkwO', 5, 'active', '2025-10-18 16:07:30');
+
+-- NOTIFICATIONS
+
+INSERT INTO NOTIFICATIONS (user_id, title, message, is_read, created_at)
+VALUES
+(1, 'Báo cáo tuần mới', 'Báo cáo tổng hợp hiệu suất giảng viên tuần này đã được tạo.', FALSE, NOW()),
+(1, 'Hệ thống cập nhật', 'Phiên bản mới của hệ thống LMS đã được triển khai thành công.', TRUE, NOW() - INTERVAL 2 DAY),
+(1, 'Yêu cầu duyệt lớp học', 'Có 3 lớp học mới đang chờ bạn duyệt trong phần quản lý lớp.', FALSE, NOW()),
+(1, 'Thông báo bảo trì', 'Hệ thống sẽ được bảo trì vào tối thứ Bảy, 22h - 23h.', TRUE, NOW() - INTERVAL 3 DAY);
+
+-- TICKET
+
+INSERT INTO TICKETS (submitted_by, assigned_to, title, issue_type, description, status, created_at)
+VALUES
+(3, 1, 'Lỗi phân công lớp học', 'System Bug', 'Không thể phân công giảng viên cho lớp LEC102.', 'open', NOW()),
+(4, 1, 'Yêu cầu thêm lớp học mới', 'Feature Request', 'Cần thêm lớp Python Nâng Cao vào học kỳ này.', 'in_progress', NOW() - INTERVAL 1 DAY),
+(5, 1, 'Sinh viên không truy cập được LMS', 'System Bug', 'Một số sinh viên báo lỗi 500 khi đăng nhập LMS.', 'open', NOW()),
+(6, 1, 'Yêu cầu hỗ trợ tài khoản', 'Account Issue', 'Sinh viên CS102 quên mật khẩu cần reset.', 'resolved', NOW() - INTERVAL 2 DAY),
+(7, 1, 'Không xem được danh sách sinh viên', 'System Bug', 'Danh sách sinh viên không tải được trong LMS.', 'open', NOW()),
+(8, 1, 'Yêu cầu cấp tài khoản Zoom', 'Request', 'Cần tài khoản Zoom để giảng dạy trực tuyến.', 'resolved', NOW() - INTERVAL 3 DAY),
+(10, 1, 'Không nhận được email thông báo', 'Notification Issue', 'Không có email khi giảng viên đăng bài mới.', 'open', NOW() - INTERVAL 3 DAY),
+(9, 1, 'Lỗi thanh toán học phí', 'Payment Error', 'Em không thanh toán được học phí qua LMS.', 'resolved', NOW() - INTERVAL 5 DAY);
+
+-- LECTURERS
+INSERT INTO LECTURERS (user_id, department, total_hours)
+VALUES
+(7, 'Công nghệ thông tin', 120),
+(8, 'Khoa học máy tính', 95);
+
+-- CLASS
+INSERT INTO CLASSES (class_name, lecturer_id, schedule, created_by, status, created_at)
+VALUES
+('Python Cơ Bản', 2, 'Thứ 2 - 8:00', 1, 'active', NOW()),
+('Java Nâng Cao', 2, 'Thứ 3 - 13:30', 1, 'active', NOW()),
+('Phân Tích Hệ Thống', 1, 'Thứ 4 - 10:00', 1, 'active', NOW());
+
+-- STUDENT
+INSERT INTO STUDENTS (user_id, enrollment_date, status)
+VALUES
+(9, '2025-10-18', 'active'),
+(10, '2025-10-18', 'active');
+
+-- CLASS_ASSIGNMENTS
+INSERT INTO CLASS_ASSIGNMENTS (class_id, student_id)
+VALUES
+-- Student One (user_id=9) học Python Cơ Bản & Java Nâng Cao
+(1, 1),
+(2, 1),
+-- Student Two (user_id=10) học Java Nâng Cao & Phân Tích Hệ Thống
+(2, 2),
+(3, 2);
+
+-- GRADES
+INSERT INTO GRADES (assignment_id, grade, grade_type, remarks)
+VALUES
+(1, 9.0, 'process', 'Hoàn thành bài tập tốt, hiểu rõ cú pháp Python cơ bản.'),
+(1, 9.2, 'project', 'Xây dựng project nhỏ hoàn chỉnh.'),
+(2, 8.5, 'process', 'Hiểu Java khá tốt, cần luyện thêm phần OOP.'),
+(2, 8.8, 'project', 'Bài đồ án hoàn chỉnh, trình bày chuyên nghiệp.'),
+(3, 7.8, 'process', 'Chưa nắm chắc phần phân tích yêu cầu.'),
+(3, 8.3, 'project', 'Đồ án khá tốt, nhưng thiếu một vài tính năng.'),
+(4, 9.5, 'process', 'Tham gia đầy đủ, hiểu sâu kiến thức.'),
+(4, 9.8, 'project', 'Bài kiểm tra xuất sắc, trình bày rõ ràng.');
+
+-- ATTENDANCE
+INSERT INTO ATTENDANCE (assignment_id, date, status)
+VALUES
+-- Student One - Python Cơ Bản (assignment_id = 1)
+(1, '2025-10-10', 'present'),
+(1, '2025-10-12', 'late'),
+-- Student One - Java Nâng Cao (assignment_id = 2)
+(2, '2025-10-11', 'present'),
+(2, '2025-10-14', 'absent'),
+-- Student Two - Java Nâng Cao (assignment_id = 3)
+(3, '2025-10-11', 'present'),
+(3, '2025-10-14', 'present'),
+-- Student Two - Phân Tích Hệ Thống (assignment_id = 4)
+(4, '2025-10-13', 'present'),
+(4, '2025-10-15', 'late');

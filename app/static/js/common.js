@@ -1,5 +1,15 @@
 document.addEventListener('DOMContentLoaded', () => {
     const loggedInUser = JSON.parse(sessionStorage.getItem('loggedInUser'));
+    
+    // Dữ liệu mô phỏng Email riêng biệt
+    const MOCK_EMAIL_DATA = {
+        'manager': 'admin.mgr@lms.vn',
+        'tc': 'tuvan.a@lms.vn',
+        'cs': 'chamsoc.hv@lms.vn',
+        'lec': 'giangvien.b@lms.vn',
+        'student': 'hocvien.c@lms.vn'
+    };
+
     if (!loggedInUser) {
         window.location.href = 'login.html';
         return;
@@ -7,16 +17,28 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const App = {
         DOM: { sidebarPlaceholder: document.getElementById('sidebar-placeholder'), headerPlaceholder: document.getElementById('header-placeholder'), contentArea: document.querySelector('.content-area'), },
+        
+        Helpers: {
+            getRoleDisplay: (role) => {
+                const map = { 'lec': 'Giảng viên', 'tc': 'Tư vấn', 'cs': 'Chăm sóc HV', 'manager': 'Quản lý', 'student': 'Học viên', 'all': 'Tất cả' };
+                return map[role] || role.toUpperCase();
+            }
+        },
+
         async init() {
             await Promise.all([this.loadPartial('sidebar'), this.loadPartial('header')]);
+            
             this.setupUI();
             this.bindEvents();
+            this.ProfileModal.init(this.Helpers); 
         },
         async loadPartial(name) {
             try {
                 const response = await fetch(`partials/${name}.html`);
                 const html = await response.text();
-                this.DOM[`${name}Placeholder`].innerHTML = html;
+                if (this.DOM[`${name}Placeholder`]) {
+                    this.DOM[`${name}Placeholder`].innerHTML = html;
+                }
             } catch (error) { console.error(`Lỗi khi tải ${name}:`, error); }
         },
         setupUI() {
@@ -31,29 +53,136 @@ document.addEventListener('DOMContentLoaded', () => {
         bindEvents() {
             const sidebarMenu = document.querySelector('.sidebar-menu');
             const logoutBtn = document.getElementById('logout-btn');
+            const userFullnameElement = document.getElementById('user-fullname');
 
-            sidebarMenu.addEventListener('click', (e) => {
-                const link = e.target.closest('a');
-                if (link) {
+            if (userFullnameElement){
+                userFullnameElement.addEventListener('click', (e) => {
                     e.preventDefault();
-                    const targetId = link.dataset.target;
-                    this.DOM.contentArea.querySelectorAll('.content-section').forEach(section => {
-                        section.classList.toggle('active', section.id === targetId);
-                    });
-                    sidebarMenu.querySelectorAll('li').forEach(li => {
-                        li.classList.remove('active');
-                        if (li.contains(link)) li.classList.add('active');
+                    const user = JSON.parse(sessionStorage.getItem('loggedInUser'));
+                    if (user) {
+                        this.ProfileModal.open(user);
+                    }
+                });
+            }
+
+            if (sidebarMenu) {
+                sidebarMenu.addEventListener('click', (e) => {
+                    const link = e.target.closest('a');
+                    if (link) {
+                        e.preventDefault();
+                        const targetId = link.dataset.target;
+                        this.DOM.contentArea.querySelectorAll('.content-section').forEach(section => {
+                            section.classList.toggle('active', section.id === targetId);
+                        });
+                        sidebarMenu.querySelectorAll('li').forEach(li => {
+                            li.classList.remove('active');
+                            if (li.contains(link)) li.classList.add('active');
+                        });
+                    }
+                });
+            }
+
+            if (logoutBtn) {
+                logoutBtn.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    sessionStorage.removeItem('loggedInUser');
+                    window.location.href = 'login.html';
+                });
+            }
+        },
+
+        ProfileModal: {
+            DOM: {},
+            Helpers: null,
+            currentEmail: null, 
+
+            init(Helpers) {
+                this.Helpers = Helpers;
+                this.DOM.overlay = document.getElementById('profile-modal-overlay');
+                
+                if (!this.DOM.overlay) {
+                    return; 
+                } 
+
+                // Các nút không còn chức năng Edit/Save
+                this.DOM.closeBtn = document.getElementById('close-profile-modal-btn');
+                this.DOM.cancelBtn = document.getElementById('cancel-profile-btn');
+                this.DOM.toggleEditBtn = document.getElementById('toggle-edit-profile-btn'); // Cần ẩn nút này trong HTML
+                this.DOM.saveBtn = document.getElementById('save-profile-btn'); // Cần ẩn nút này trong HTML
+                
+                // Khu vực hiển thị thông tin
+                this.DOM.infoDisplay = document.getElementById('profile-info-display');
+                this.DOM.usernameDisplay = document.getElementById('profile-username');
+                this.DOM.emailDisplay = document.getElementById('profile-email');
+                
+                // Khu vực Edit không còn được sử dụng (Cần ẩn/xóa trong HTML)
+                this.DOM.editForm = document.getElementById('profile-edit-form');
+                
+                this.bindEvents();
+            },
+
+            bindEvents() {
+                // Chỉ gán sự kiện Đóng
+                if (this.DOM.closeBtn) this.DOM.closeBtn.addEventListener('click', () => this.close());
+                if (this.DOM.cancelBtn) this.DOM.cancelBtn.addEventListener('click', () => this.close());
+                
+                // Vô hiệu hóa nút Thay đổi thông tin
+                if (this.DOM.toggleEditBtn) {
+                    this.DOM.toggleEditBtn.style.display = 'none';
+                }
+                // Vô hiệu hóa nút Lưu
+                if (this.DOM.saveBtn) {
+                    this.DOM.saveBtn.style.display = 'none';
+                }
+
+                if (this.DOM.overlay) {
+                    this.DOM.overlay.addEventListener('click', (e) => {
+                        if (e.target === this.DOM.overlay) this.close();
                     });
                 }
-            });
+            },
+            
+            open(user) {
+                const roleKey = user.role;
+                this.currentEmail = MOCK_EMAIL_DATA[roleKey] || 'contact@lms.edu';
+                
+                if (this.DOM.usernameDisplay) this.DOM.usernameDisplay.textContent = user.username;
+                if (this.DOM.emailDisplay) this.DOM.emailDisplay.textContent = this.currentEmail; 
 
-            logoutBtn.addEventListener('click', (e) => {
-                e.preventDefault();
-                sessionStorage.removeItem('loggedInUser');
-                window.location.href = 'login.html';
-            });
+                // Luôn hiển thị chế độ Xem
+                this.setModeViewOnly();
+
+                this.DOM.overlay.classList.remove('hidden');
+            },
+
+            close() {
+                if (this.DOM.overlay) this.DOM.overlay.classList.add('hidden');
+            },
+            
+            // Hàm chỉ đặt Modal ở trạng thái Xem
+            setModeViewOnly() {
+                // Luôn hiển thị khu vực thông tin
+                if (this.DOM.infoDisplay) {
+                    this.DOM.infoDisplay.classList.remove('hidden');
+                }
+                
+                // Luôn ẩn khu vực chỉnh sửa (nếu tồn tại)
+                if (this.DOM.editForm) {
+                    this.DOM.editForm.classList.add('hidden');
+                }
+                
+                // Đảm bảo nút "Đóng" (hoặc Hủy) hiển thị đúng
+                if (this.DOM.cancelBtn) {
+                    this.DOM.cancelBtn.textContent = 'Đóng';
+                }
+
+                // Ẩn các nút hành động (Edit/Save)
+                if (this.DOM.toggleEditBtn) this.DOM.toggleEditBtn.style.display = 'none';
+                if (this.DOM.saveBtn) this.DOM.saveBtn.style.display = 'none';
+            }
         }
     };
 
+    
     App.init();
 });
