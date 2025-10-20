@@ -9,3 +9,4 @@ from app.models.grade import Grade
 from app.models.ticket import Ticket
 from app.models.report import Report
 from app.models.notification import Notification
+from app.models.lecturers_attendance import LecturerAttendanceStatus

@@ -6,8 +6,10 @@ from app.models.lecturer import Lecturer
 from app.models.student import Student
 from app.models.ticket import Ticket
 from app.models.class_assignment import ClassAssignment
+from app.models.lecturers_attendance import LecturersAttendance
 from app.db.database import SessionLocal
 from datetime import date
+from sqlalchemy import func
 
 # == Thời khoá biểu
 def get_view_schedule_of_lecturer(user_id: int):
@@ -58,23 +60,27 @@ def get_view_no_lecturer_schedule():
 
 def get_workinghour(user_id: int):
     db = SessionLocal()
-    """
-    Lấy tổng số giờ làm việc của một giảng viên dựa trên user_id của họ.
-
-    Args:
-        user_id (int): ID của người dùng trong bảng USERS.
-        db (Session): Phiên làm việc với cơ sở dữ liệu.
-    """
+# 1. Tìm thông tin giảng viên từ user_id.
     lecturer = db.query(Lecturer).filter(Lecturer.user_id == user_id).first()
 
     if not lecturer:
         raise HTTPException(
-            status_code=404, 
+            status_code=fastapi_status.HTTP_404_NOT_FOUND,
             detail="Lecturer not found for the given user ID"
         )
     
-    return {"total_hours": lecturer.total_hours}
+    # 2. Đếm số buổi dạy thực tế (hiện diện hoặc trễ) từ bảng điểm danh.
+    attended_sessions_count = db.query(func.count(LecturersAttendance.lecturer_attendance_id)).filter(
+        LecturersAttendance.lecturer_id == lecturer.lecturer_id,
+        # Chỉ đếm các buổi 'present' hoặc 'late', bỏ qua 'absent'
+        LecturersAttendance.status.in_(['present', 'late']) 
+    ).scalar() # .scalar() để lấy kết quả đếm trực tiếp
 
+    # 3. Tính tổng số giờ (giả định mỗi buổi dạy là 2 giờ).
+    calculated_hours = attended_sessions_count * 2
+    
+    # 4. Trả về kết quả đã tính toán (dùng key 'total_hours' để khớp với response model)
+    return {"total_hours": calculated_hours}
 
 def register_for_class(user_id: int,class_id: int):
 

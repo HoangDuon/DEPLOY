@@ -1,5 +1,5 @@
 from fastapi import APIRouter
-from app.schemas.lecturer_schema import ClassInfo,WorkingHourInfo
+from app.schemas.lecturer_schema import ClassInfo
 from app.services.lecture_service import get_view_schedule_of_lecturer,\
     get_workinghour,get_view_no_lecturer_schedule,\
         register_for_class, take_attendence, enter_grades
@@ -19,7 +19,7 @@ def get_classes_no_lecturer_schedule():
 
     return classes
 
-@router.get("/workinghour", response_model=WorkingHourInfo)
+@router.get("/workinghour")
 def get_workinghour_for_lecturer(user_id: int):
     classes = get_workinghour(user_id)
 

@@ -1,15 +1,20 @@
 from fastapi import HTTPException, status as fastapi_status
+from datetime import datetime
 from app.models.class_ import Class
 from app.models.grade import Grade
 from app.models.attendance import Attendance, AttendanceStatus
 from app.models.lecturer import Lecturer
 from app.models.student import Student
 from app.models.ticket import Ticket
+from sqlalchemy import func
+from app.models.lecturers_attendance import LecturersAttendance, LecturerAttendanceStatus
 from app.models.class_assignment import ClassAssignment
+from app.models.notification import Notification
 from app.models.user import User
 from app.db.database import SessionLocal
 from datetime import datetime, timedelta
 from typing import Optional
+import re
 
 # == Thời khoá biểu
 def get_classes():
@@ -264,3 +269,465 @@ def change_status_class(
     db.refresh(class_to_toggle)
 
     return {"message": f"Class status has been toggled to '{new_status}'."}
+
+def make_notify(
+    user_id: int,
+    title: str,
+    message: str,
+):
+    db = SessionLocal() 
+    new_notification = Notification(
+            user_id=user_id,
+            title=title,
+            message=message
+        )
+
+    db.add(new_notification)
+    
+    db.commit()
+    
+    db.refresh(new_notification)
+    
+    return new_notification
+
+def view_tickets():
+    db = SessionLocal() 
+    tickets = db.query(Ticket).order_by(Ticket.created_at.desc()).all()
+    return tickets
+
+def change_status_tickets(ticket_id: int, new_status: str):
+    db = SessionLocal() 
+    # 1. Xác thực trạng thái mới (có thể bỏ qua nếu đã validate ở endpoint)
+    valid_statuses = {'open', 'in_progress', 'resolved'}
+    if new_status not in valid_statuses:
+        raise HTTPException(
+            status_code=fastapi_status.HTTP_400_BAD_REQUEST,
+            detail=f"Invalid status '{new_status}'. Must be one of: {', '.join(valid_statuses)}"
+        )
+
+    # 2. Tìm ticket trong database.
+    ticket_to_update = db.query(Ticket).filter(Ticket.ticket_id == ticket_id).first()
+    if not ticket_to_update:
+        raise HTTPException(
+            status_code=fastapi_status.HTTP_404_NOT_FOUND,
+            detail=f"Ticket with ID {ticket_id} not found."
+        )
+
+    # 3. Cập nhật trạng thái.
+    ticket_to_update.status = new_status
+
+    # 4. Tự động cập nhật resolved_at.
+    if new_status == 'resolved':
+        ticket_to_update.resolved_at = datetime.now()
+    else:
+        # Nếu ticket được mở lại, xóa ngày hoàn thành
+        ticket_to_update.resolved_at = None
+
+    # 5. Commit và refresh để lưu thay đổi.
+    db.commit()
+    db.refresh(ticket_to_update)
+    
+    return ticket_to_update
+
+def view_teacher_performance(user_id: int):
+    db = SessionLocal() 
+    
+    # 1. Tìm giảng viên và lấy tên của họ (JOIN với bảng User)
+    lecturer_info = db.query(
+        Lecturer, 
+        User.name
+    ).join(
+        User, Lecturer.user_id == User.user_id
+    ).filter(
+        Lecturer.user_id == user_id
+    ).first()
+
+    if not lecturer_info:
+        raise HTTPException(
+            status_code=fastapi_status.HTTP_404_NOT_FOUND,
+            detail="Lecturer not found for the given user ID"
+        )
+    
+    lecturer = lecturer_info[0]
+    lecturer_name = lecturer_info[1]
+
+    # 2. Thống kê "Ngày dạy", "Ngày nghỉ" từ bảng điểm danh giảng viên
+    attendance_stats = db.query(
+        LecturersAttendance.status, 
+        func.count(LecturersAttendance.status).label("count")
+    ).filter(
+        LecturersAttendance.lecturer_id == lecturer.lecturer_id
+    ).group_by(
+        LecturersAttendance.status
+    ).all()
+    
+    # Xử lý kết quả thống kê
+    teaching_attendance = {
+        "present_days": 0,
+        "absent_days": 0,
+        "late_days": 0
+    }
+    for stat in attendance_stats:
+        if stat.status == LecturerAttendanceStatus.present:
+            teaching_attendance["present_days"] = stat.count
+        elif stat.status == LecturerAttendanceStatus.absent:
+            teaching_attendance["absent_days"] = stat.count
+        elif stat.status == LecturerAttendanceStatus.late:
+            teaching_attendance["late_days"] = stat.count
+
+    # 3. Thống kê số lượng lớp học
+    active_classes_count = db.query(Class).filter(
+        Class.lecturer_id == lecturer.lecturer_id,
+        Class.status == 'active'
+    ).count()
+    
+    archived_classes_count = db.query(Class).filter(
+        Class.lecturer_id == lecturer.lecturer_id,
+        Class.status == 'archived'
+    ).count()
+
+    # 4. Thống kê "Điểm số của lớp" (Điểm trung bình của tất cả sinh viên)
+    #    JOIN từ Grade -> ClassAssignment -> Class
+    average_grade = db.query(
+        func.avg(Grade.grade)
+    ).join(
+        ClassAssignment, Grade.assignment_id == ClassAssignment.assignment_id
+    ).join(
+        Class, ClassAssignment.class_id == Class.class_id
+    ).filter(
+        Class.lecturer_id == lecturer.lecturer_id
+    ).scalar() # Lấy về một giá trị duy nhất
+
+    # 5. Tạo báo cáo cuối cùng
+    performance_report = {
+        "lecturer_id": lecturer.lecturer_id,
+        "lecturer_name": lecturer_name,
+        "teaching_attendance": teaching_attendance,
+        "class_overview": {
+            "active_classes": active_classes_count,
+            "archived_classes": archived_classes_count
+        },
+        "student_performance": {
+            # Làm tròn điểm trung bình đến 2 chữ số
+            "average_grade_all_classes": round(average_grade, 2) if average_grade else 0.0
+        }
+    }
+    
+    return performance_report
+    
+def get_unassigned_classes():
+    db = SessionLocal()
+    # SQLAlchemy sẽ tự động dịch `== None` thành `IS NULL` trong SQL
+    unassigned_classes = db.query(Class).filter(
+        Class.lecturer_id == None,
+        Class.status.in_(['active', 'pending']) # Chỉ lấy các lớp cần gán
+    ).all()
+    
+    return unassigned_classes
+
+def check_lecturer_schedule_conflict(
+    lecturer_id: int,
+    new_start_time: datetime,
+    current_class_id: int = None # Dùng khi cập nhật, để loại trừ chính nó
+) -> bool:
+    db = SessionLocal()
+    """
+    Kiểm tra xem giảng viên đã bị trùng lịch vào thời điểm này chưa.
+    Bỏ qua giây khi so sánh.
+    """
+    # 1. Chuẩn hóa thời gian của lớp mới (loại bỏ giây)
+    normalized_new_start = new_start_time.replace(second=0, microsecond=0)
+    normalized_new_end = normalized_new_start + timedelta(hours=2)
+
+    # 2. Lấy tất cả các lớp 'active' khác mà giảng viên này đang dạy
+    query = db.query(Class).filter(
+        Class.lecturer_id == lecturer_id,
+        Class.status == 'active'
+    )
+    
+    # Nếu đang cập nhật, loại trừ chính lớp này
+    if current_class_id:
+        query = query.filter(Class.class_id != current_class_id)
+        
+    existing_classes = query.all()
+
+    # 3. So sánh từng lớp đã có với lớp mới
+    for existing_class in existing_classes:
+        # Chuẩn hóa thời gian của lớp đã có
+        normalized_existing_start = existing_class.schedule.replace(second=0, microsecond=0)
+        normalized_existing_end = normalized_existing_start + timedelta(hours=2)
+
+        # Logic kiểm tra 2 khoảng thời gian giao nhau
+        # (StartA < EndB) AND (EndA > StartB)
+        if (normalized_new_start < normalized_existing_end and 
+            normalized_new_end > normalized_existing_start):
+            return True # Tìm thấy xung đột
+
+    return False # Không có xung đột
+
+def assign_teacher_to_class(
+    user_id: int,
+    class_id: int):
+    db = SessionLocal()
+    """
+    Gán một giảng viên vào một lớp học đã có và kiểm tra trùng lịch.
+
+    Args:
+        lecturer_id (int): ID của giảng viên (từ bảng LECTURERS) sẽ được gán.
+        class_id (int): ID của lớp học cần được gán.
+        db (Session): Phiên làm việc với database.
+
+    Returns:
+        Class: Đối tượng lớp học sau khi đã được cập nhật.
+    """
+    # 1. Tìm thông tin giảng viên từ user_id.
+    lecturer = db.query(Lecturer).filter(Lecturer.user_id == user_id).first()
+    if not lecturer:
+        raise HTTPException(
+            status_code=fastapi_status.HTTP_404_NOT_FOUND,
+            detail=f"Lecturer not found for the given user ID {user_id}."
+        )
+
+    # 2. Tìm lớp học
+    class_to_assign = db.query(Class).filter(Class.class_id == class_id).first()
+    if not class_to_assign:
+        raise HTTPException(
+            status_code=fastapi_status.HTTP_404_NOT_FOUND,
+            detail=f"Class with ID {class_id} not found."
+        )
+
+    # 3. Kiểm tra xem lớp đã có ai dạy chưa
+    if class_to_assign.lecturer_id is not None:
+        raise HTTPException(
+            status_code=fastapi_status.HTTP_409_CONFLICT,
+            detail=f"Class is already assigned to lecturer ID {class_to_assign.lecturer_id}."
+        )
+
+    # 4. ❗ KIỂM TRA XUNG ĐỘT LỊCH CỦA GIẢNG VIÊN
+    #    Sử dụng lecturer.lecturer_id của giảng viên vừa tìm được
+    is_conflict = check_lecturer_schedule_conflict(
+        lecturer_id=lecturer.lecturer_id,
+        new_start_time=class_to_assign.schedule, # Lấy lịch của lớp sắp gán
+    )
+
+    if is_conflict:
+        raise HTTPException(
+            status_code=fastapi_status.HTTP_409_CONFLICT,
+            detail=f"Lecturer schedule conflict. The lecturer is already busy at this time."
+        )
+
+    # 5. Nếu không có lỗi, gán giảng viên và lưu
+    class_to_assign.lecturer_id = lecturer.lecturer_id
+    db.commit()
+    db.refresh(class_to_assign)
+
+    return class_to_assign
+
+def get_class_assignment_requests():
+    db = SessionLocal()
+# Truy vấn các ticket, JOIN với bảng User để lấy tên người gửi
+    requests = db.query(
+        Ticket,
+        User.name
+    ).join(
+        User, Ticket.submitted_by == User.user_id
+    ).filter(
+        Ticket.issue_type == 'Class Request',
+        Ticket.status == 'open' # Chỉ lấy các yêu cầu đang mở, chưa được duyệt
+    ).all()
+    
+    # Định dạng lại kết quả trả về cho rõ ràng
+    result_list = [
+        {
+            "ticket_id": ticket.ticket_id,
+            "submitted_by_user_id": ticket.submitted_by,
+            "submitted_by_name": user_name,
+            "title": ticket.title,
+            "description": ticket.description,
+            "created_at": ticket.created_at
+        }
+        for ticket, user_name in requests
+    ]
+
+    return result_list
+
+def _parse_class_id_from_ticket(title: str) -> Optional[int]:
+    """Trích xuất Class ID từ chuỗi tiêu đề (ví dụ: '... Class ID: 7')."""
+    match = re.search(r"Class ID: (\d+)", title)
+    if match:
+        try:
+            return int(match.group(1))
+        except ValueError:
+            return None
+    return None
+
+def approve_class_assignment_request(
+    ticket_id: int
+):
+    db = SessionLocal()
+    # 1. Tìm ticket và kiểm tra
+    ticket = db.query(Ticket).filter(Ticket.ticket_id == ticket_id).first()
+    if not ticket:
+        raise HTTPException(
+            status_code=fastapi_status.HTTP_404_NOT_FOUND,
+            detail=f"Ticket with ID {ticket_id} not found."
+        )
+    
+    if ticket.issue_type != 'Class Request':
+        raise HTTPException(
+            status_code=fastapi_status.HTTP_400_BAD_REQUEST,
+            detail="This is not a class assignment ticket."
+        )
+
+    if ticket.status.name != 'open': # Giả sử model Ticket dùng Python Enum
+        raise HTTPException(
+            status_code=fastapi_status.HTTP_409_CONFLICT,
+            detail=f"Ticket is already '{ticket.status.name}', not 'open'."
+        )
+
+    # 2. Lấy thông tin từ ticket
+    lecturer_user_id = ticket.submitted_by
+    class_id = _parse_class_id_from_ticket(ticket.title)
+
+    if not class_id:
+        raise HTTPException(
+            status_code=fastapi_status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Could not parse class_id from ticket title: {ticket.title}"
+        )
+
+    # 3. Tìm giảng viên và lớp học tương ứng
+    lecturer = db.query(Lecturer).filter(Lecturer.user_id == lecturer_user_id).first()
+    if not lecturer:
+        raise HTTPException(
+            status_code=fastapi_status.HTTP_404_NOT_FOUND,
+            detail=f"Requesting lecturer (user_id: {lecturer_user_id}) not found in Lecturers table."
+        )
+
+    class_to_assign = db.query(Class).filter(Class.class_id == class_id).first()
+    if not class_to_assign:
+        raise HTTPException(
+            status_code=fastapi_status.HTTP_404_NOT_FOUND,
+            detail=f"Class with ID {class_id} (from ticket) not found."
+        )
+
+    # 4. Kiểm tra logic nghiệp vụ: Lớp có còn trống không?
+    if class_to_assign.lecturer_id is not None:
+        raise HTTPException(
+            status_code=fastapi_status.HTTP_409_CONFLICT,
+            detail=f"Class (ID: {class_id}) is no longer unassigned. It's already assigned to lecturer ID {class_to_assign.lecturer_id}."
+        )
+
+    # 5. Kiểm tra logic nghiệp vụ: Giảng viên có bị trùng lịch không?
+    is_conflict = check_lecturer_schedule_conflict(
+        lecturer_id=lecturer.lecturer_id,
+        new_start_time=class_to_assign.schedule, # Lấy lịch của lớp sắp gán
+    )
+    
+    if is_conflict:
+        raise HTTPException(
+            status_code=fastapi_status.HTTP_409_CONFLICT,
+            detail=f"Lecturer schedule conflict. Approving this request would cause a schedule clash."
+        )
+
+    # 6. Mọi thứ hợp lệ -> Thực hiện 2 hành động trong một giao dịch
+    try:
+        # Hành động 1: Gán giảng viên vào lớp
+        class_to_assign.lecturer_id = lecturer.lecturer_id
+        
+        # Hành động 2: Đóng ticket
+        ticket.status = 'resolved'
+        ticket.resolved_at = datetime.now()
+
+        # 7. Commit cả 2 thay đổi
+        db.commit()
+    
+    except Exception as e:
+        db.rollback() # Hoàn tác nếu có lỗi
+        raise HTTPException(
+            status_code=fastapi_status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"An error occurred during the transaction: {e}"
+        )
+
+    return {"message": f"Successfully approved request. Lecturer (ID: {lecturer.lecturer_id}) assigned to class (ID: {class_id}). Ticket (ID: {ticket_id}) resolved."}
+
+def take_lecturer_attendance(
+    lecturer_id: int,
+    class_id: int,
+    attendance_status: str,
+    notes: Optional[str] = None
+):
+    db = SessionLocal()
+    """
+    Điểm danh cho một giảng viên tại một lớp học, tự động lấy ngày hiện tại.
+
+    Args:
+        lecturer_id (int): ID của giảng viên (từ bảng LECTURERS).
+        class_id (int): ID của lớp học.
+        attendance_status (str): Trạng thái ('present', 'absent', 'late').
+        db (Session): Phiên làm việc với database.
+        notes (Optional[str]): Ghi chú thêm.
+
+    Returns:
+        LecturersAttendance: Bản ghi điểm danh vừa được tạo.
+    """
+    
+    # 1. Tự động lấy ngày hiện tại
+    today = datetime.today()
+
+    # 2. Kiểm tra trạng thái đầu vào có hợp lệ không
+    valid_statuses = [s.value for s in LecturerAttendanceStatus]
+    if attendance_status not in valid_statuses:
+        raise HTTPException(
+            status_code=fastapi_status.HTTP_400_BAD_REQUEST,
+            detail=f"Invalid status. Must be one of: {', '.join(valid_statuses)}"
+        )
+
+    # 3. Kiểm tra xem Lớp học và Giảng viên có tồn tại không
+    lecturer = db.query(Lecturer).filter(Lecturer.lecturer_id == lecturer_id).first()
+    if not lecturer:
+        raise HTTPException(
+            status_code=fastapi_status.HTTP_404_NOT_FOUND,
+            detail=f"Lecturer with ID {lecturer_id} not found."
+        )
+
+    class_to_attend = db.query(Class).filter(Class.class_id == class_id).first()
+    if not class_to_attend:
+        raise HTTPException(
+            status_code=fastapi_status.HTTP_404_NOT_FOUND,
+            detail=f"Class with ID {class_id} not found."
+        )
+
+    # 4. Kiểm tra giảng viên có được gán cho lớp này không?
+    if class_to_attend.lecturer_id != lecturer.lecturer_id:
+        raise HTTPException(
+            status_code=fastapi_status.HTTP_403_FORBIDDEN,
+            detail=f"Lecturer (ID: {lecturer_id}) is not assigned to this class (ID: {class_id})."
+        )
+
+    # 5. Kiểm tra xem đã điểm danh hôm đó chưa (dùng 'today')
+    existing_record = db.query(LecturersAttendance).filter(
+        LecturersAttendance.lecturer_id == lecturer_id,
+        LecturersAttendance.class_id == class_id,
+        LecturersAttendance.attendance_date == today  # Sử dụng ngày hiện tại
+    ).first()
+
+    if existing_record:
+        raise HTTPException(
+            status_code=fastapi_status.HTTP_409_CONFLICT,
+            detail=f"Attendance has already been taken for this lecturer in this class on {today}."
+        )
+
+    # 6. Tạo bản ghi điểm danh mới (dùng 'today')
+    new_attendance_record = LecturersAttendance(
+        lecturer_id=lecturer_id,
+        class_id=class_id,
+        attendance_date=today,  # Sử dụng ngày hiện tại
+        status=attendance_status,
+        notes=notes
+    )
+    
+    db.add(new_attendance_record)
+    db.commit()
+    db.refresh(new_attendance_record)
+
+    return new_attendance_record

@@ -9,10 +9,3 @@ class ClassInfo(BaseModel):
 
     class Config:
         from_attributes = True
-
-
-class WorkingHourInfo(BaseModel):
-    total_hours : int
-
-    class Config:
-        from_attributes = True

@@ -18,3 +18,6 @@ Database Ver3:
     - Thêm cột status = 'pending' vào bảng CLASSES (đã sửa code trong Database.txt)
     - Thêm cột place vào CLASSES (đã sửa code trong Database.txt)
     - Sửa cột schedule thành datetime (đã sửa code trong Database.txt)
+
+Database Ver4:
+    - Thêm bảng điểm danh giáo viên: (đã sửa code trong Database.txt)
