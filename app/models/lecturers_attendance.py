@@ -10,7 +10,7 @@ class LecturerAttendanceStatus(str, enum.Enum):
     late = "late"
 
 class LecturersAttendance(Base):
-    __tablename__ = "lecturers_attendance"
+    __tablename__ = "LECTURERS_ATTENDANCE"
 
     lecturer_attendance_id = Column(Integer, primary_key=True, autoincrement=True)
     

@@ -1,5 +1,8 @@
 document.addEventListener('DOMContentLoaded', () => {
 
+    const user = sessionStorage.getItem("loggedInUser");
+    const token = sessionStorage.getItem("accessToken");
+
     // ==================================================================
     // DỮ LIỆU MẪU (Mock Data)
     // ==================================================================

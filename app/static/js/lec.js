@@ -1,4 +1,33 @@
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
+
+    const user = JSON.parse(sessionStorage.getItem("loggedInUser"));
+    const token = sessionStorage.getItem("accessToken");
+
+    const state = {
+        workinghour: null
+    };
+
+
+    console.log(user);
+    try {
+        const respone = await fetch(`http://127.0.0.1:8000/lec/workinghour?user_id=${user.id}`, {
+            method: "GET",
+            headers: {
+                "Content-Type": "application/json",
+                "Authorization": `Bearer ${token}`
+            }
+        });
+
+        if (!respone.ok) {
+            throw new Error(`Khong load duoc ${respone.status}`); 
+        }
+
+        const workinghour = await respone.json();
+        console.log(workinghour);
+    } catch (error) {
+        console.log(error);
+        console.log("Loi khi load diem nhe");
+    }
 
     // ==================================================================
     // DỮ LIỆU MẪU (MOCK DATA) - ĐÃ CẬP NHẬT
@@ -111,34 +140,73 @@ document.addEventListener('DOMContentLoaded', () => {
                 this.loadAnnouncements();
             },
 
-            loadAnnouncements() {
-                // 1. Lọc và sắp xếp thông báo
-                const relevantAnnouncements = MOCK_DATA.announcements
-                    .filter(a => a.role === 'lec' || a.role === 'all')
-                    .sort((a, b) => new Date(b.date) - new Date(a.date)); // Sort gần nhất đến xa nhất
+async loadAnnouncements() {
+    const announcementsList = this.DOM.announcementsList;
+    if (!announcementsList) return;
 
-                this.DOM.announcementsList.innerHTML = '';
+    // Hiển thị thông báo đang tải
+    announcementsList.innerHTML = `
+        <p style="padding: 15px; text-align: center; color: gray;">Đang tải thông báo...</p>
+    `;
 
-                if (relevantAnnouncements.length === 0) {
-                    this.DOM.announcementsList.innerHTML = '<p style="padding: 15px; text-align: center;">Hiện chưa có thông báo mới nào.</p>';
-                    return;
-                }
+    try {
+        // 🔹 Gọi API thật — không cần truyền gì
+        const response = await fetch("http://127.0.0.1:8000/notify/notifications", {
+            method: "GET",
+            headers: {
+                "Content-Type": "application/json",
+                "Authorization": `Bearer ${token}` // có thể bỏ nếu không yêu cầu xác thực
+            }
+        });
 
-                // 2. Render ra UI
-                relevantAnnouncements.forEach(ann => {
-                    const dateObj = new Date(ann.date);
-                    const formattedDate = `${dateObj.toLocaleDateString('vi-VN')} ${dateObj.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}`;
-                    
-                    const announcementHTML = `
-                        <div class="card announcement-card" style="margin-bottom: 15px; border-left: 5px solid #4a6cf7;">
-                            <h4>${ann.title}</h4>
-                            <p style="margin-bottom: 5px;">${ann.content}</p>
-                            <small style="color: #6c757d;"><i class="fas fa-clock"></i> ${formattedDate}</small>
-                        </div>
-                    `;
-                    this.DOM.announcementsList.insertAdjacentHTML('beforeend', announcementHTML);
-                });
-            },
+        if (!response.ok) {
+            throw new Error(`Không thể tải thông báo (HTTP ${response.status})`);
+        }
+
+        const notifications = await response.json();
+
+        // 🔹 Nếu không có dữ liệu
+        if (!notifications || notifications.length === 0) {
+            announcementsList.innerHTML = `
+                <p style="padding: 15px; text-align: center;">Hiện chưa có thông báo nào.</p>
+            `;
+            return;
+        }
+
+        // 🔹 Sắp xếp theo ngày mới nhất
+        notifications.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+
+        // 🔹 Render từng thông báo
+        announcementsList.innerHTML = '';
+        notifications.forEach(noti => {
+            const dateObj = new Date(noti.created_at);
+            const formattedDate = `${dateObj.toLocaleDateString('vi-VN')} ${dateObj.toLocaleTimeString('vi-VN', {
+                hour: '2-digit',
+                minute: '2-digit'
+            })}`;
+
+            const announcementHTML = `
+                <div class="card announcement-card" 
+                    style="margin-bottom: 15px; border-left: 5px solid #1e40af; padding: 10px 15px;">
+                    <h4>${noti.title}</h4>
+                    <p style="margin-bottom: 5px;">${noti.message}</p>
+                    <small style="color: #6c757d;">
+                        <i class="fas fa-clock"></i> ${formattedDate}
+                    </small>
+                </div>
+            `;
+            announcementsList.insertAdjacentHTML('beforeend', announcementHTML);
+        });
+
+    } catch (error) {
+        console.error("Lỗi khi tải thông báo:", error);
+        announcementsList.innerHTML = `
+            <p style="padding: 15px; text-align: center; color: red;">
+                Lỗi khi tải thông báo. Vui lòng thử lại sau.
+            </p>
+        `;
+    }
+},
 
             switchTab(targetTab) {
                 this.DOM.tabs.forEach(btn => {

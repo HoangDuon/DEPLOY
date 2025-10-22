@@ -1,6 +1,9 @@
 document.addEventListener('DOMContentLoaded', () => {
     console.log("Trang của CS đã sẵn sàng!");
 
+    const user = sessionStorage.getItem("loggedInUser");
+    const token = sessionStorage.getItem("accessToken");
+
     // ==================================================================
     // DỮ LIỆU MẪU (Mock Data)
     // ==================================================================
@@ -80,36 +83,73 @@ document.addEventListener('DOMContentLoaded', () => {
     // ===============================================
 
     // Load Thông báo (MỚI: Tách khỏi DashboardUI)
-    function loadAnnouncements() {
-        const announcementsList = document.getElementById('announcements-list');
-        if (!announcementsList) return;
-        
-        const relevantAnnouncements = announcements
-            .filter(a => a.role === 'cs' || a.role === 'all')
-            .sort((a, b) => new Date(b.date) - new Date(a.date));
+async function loadAnnouncements() {
+    const announcementsList = document.getElementById("announcements-list");
+    if (!announcementsList) return;
 
-        announcementsList.innerHTML = '';
+    // Hiển thị thông báo đang tải
+    announcementsList.innerHTML = `
+        <p style="padding: 15px; text-align: center; color: gray;">Đang tải thông báo...</p>
+    `;
 
-        if (relevantAnnouncements.length === 0) {
-            announcementsList.innerHTML = '<p style="padding: 15px; text-align: center;">Hiện chưa có thông báo mới nào.</p>';
+    try {
+        // 🔹 Gọi API thật — không cần truyền gì
+        const response = await fetch("http://127.0.0.1:8000/notify/notifications", {
+            method: "GET",
+            headers: {
+                "Content-Type": "application/json",
+                "Authorization": `Bearer ${token}` // có thể bỏ nếu không yêu cầu xác thực
+            }
+        });
+
+        if (!response.ok) {
+            throw new Error(`Không thể tải thông báo (HTTP ${response.status})`);
+        }
+
+        const notifications = await response.json();
+
+        // 🔹 Nếu không có dữ liệu
+        if (!notifications || notifications.length === 0) {
+            announcementsList.innerHTML = `
+                <p style="padding: 15px; text-align: center;">Hiện chưa có thông báo nào.</p>
+            `;
             return;
         }
 
-        relevantAnnouncements.forEach(ann => {
-            const dateObj = new Date(ann.date);
-            const formattedDate = `${dateObj.toLocaleDateString('vi-VN')} ${dateObj.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}`;
-            
+        // 🔹 Sắp xếp theo ngày mới nhất
+        notifications.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+
+        // 🔹 Render từng thông báo
+        announcementsList.innerHTML = '';
+        notifications.forEach(noti => {
+            const dateObj = new Date(noti.created_at);
+            const formattedDate = `${dateObj.toLocaleDateString('vi-VN')} ${dateObj.toLocaleTimeString('vi-VN', {
+                hour: '2-digit',
+                minute: '2-digit'
+            })}`;
+
             const announcementHTML = `
-                <div class="card announcement-card" style="margin-bottom: 15px; border-left: 5px solid #1e40af;">
-                    <h4>${ann.title}</h4>
-                    <p style="margin-bottom: 5px;">${ann.content}</p>
-                    <small style="color: #6c757d;"><i class="fas fa-clock"></i> ${formattedDate}</small>
+                <div class="card announcement-card" 
+                    style="margin-bottom: 15px; border-left: 5px solid #1e40af; padding: 10px 15px;">
+                    <h4>${noti.title}</h4>
+                    <p style="margin-bottom: 5px;">${noti.message}</p>
+                    <small style="color: #6c757d;">
+                        <i class="fas fa-clock"></i> ${formattedDate}
+                    </small>
                 </div>
             `;
             announcementsList.insertAdjacentHTML('beforeend', announcementHTML);
         });
-    }
 
+    } catch (error) {
+        console.error("Lỗi khi tải thông báo:", error);
+        announcementsList.innerHTML = `
+            <p style="padding: 15px; text-align: center; color: red;">
+                Lỗi khi tải thông báo. Vui lòng thử lại sau.
+            </p>
+        `;
+    }
+}
     function loadDashboardData() {
         if (document.getElementById('dashboard') && document.getElementById('dashboard').classList.contains('active')) {
             const pendingFeedbackCount = feedbackHistoryData.filter(f => f.status === 'pending').length;

@@ -1,11 +1,16 @@
+import hashlib
 from passlib.context import CryptContext
 from datetime import datetime
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
-# 🔹 Mật khẩu chung cho toàn bộ user seed
+def hash_password(password: str) -> str:
+    # hash SHA-256
+    sha256_pw = hashlib.sha256(password.encode("utf-8")).hexdigest()
+    return pwd_context.hash(sha256_pw)
+
 plain_password = "123456"
-hashed_pw = pwd_context.hash(plain_password)
+hashed_pw = hash_password(plain_password)
 now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
 print("🔐 Generated bcrypt hash:", hashed_pw)

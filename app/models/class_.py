@@ -14,7 +14,7 @@ class Class(Base):
 
     class_id = Column(Integer, primary_key=True, autoincrement=True)
     class_name = Column(String(100), nullable=False)
-    lecturer_id = Column(Integer, ForeignKey("LECTURERS.lecturer_id", onupdate="CASCADE", ondelete="RESTRICT"), nullable=False)
+    lecturer_id = Column(Integer, ForeignKey("LECTURERS.lecturer_id", onupdate="CASCADE", ondelete="RESTRICT"), nullable=True)
     schedule = Column(DateTime, default=datetime.utcnow, nullable=False)
     created_by = Column(Integer, ForeignKey("USERS.user_id", onupdate="CASCADE", ondelete="RESTRICT"), nullable=False)
     status = Column(Enum(ClassStatus), default=ClassStatus.active, nullable=False)

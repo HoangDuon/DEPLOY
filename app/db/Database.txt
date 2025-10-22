@@ -288,18 +288,35 @@ CREATE TABLE `users` (
 -- Đang đổ dữ liệu cho bảng `users`
 --
 
-INSERT INTO `users` (`user_id`, `name`, `email`, `password_hash`, `role_id`, `status`, `created_at`) VALUES
-(1, 'Manager One', 'manager1@lms.com', '$2b$12$BARBagZbum3Bsok453JM0OJtrccGnZydq1MkkZ.jEUAEIUAf5GPhO', 1, 'active', '2025-10-16 17:58:19'),
-(2, 'Manager Two', 'manager2@lms.com', '$2b$12$BARBagZbum3Bsok453JM0OJtrccGnZydq1MkkZ.jEUAEIUAf5GPhO', 1, 'active', '2025-10-16 17:58:19'),
-(3, 'TC One', 'tc1@lms.com', '$2b$12$BARBagZbum3Bsok453JM0OJtrccGnZydq1MkkZ.jEUAEIUAf5GPhO', 2, 'active', '2025-10-16 17:58:19'),
-(4, 'TC Two', 'tc2@lms.com', '$2b$12$BARBagZbum3Bsok453JM0OJtrccGnZydq1MkkZ.jEUAEIUAf5GPhO', 2, 'active', '2025-10-16 17:58:19'),
-(5, 'CS One', 'cs1@lms.com', '$2b$12$BARBagZbum3Bsok453JM0OJtrccGnZydq1MkkZ.jEUAEIUAf5GPhO', 3, 'active', '2025-10-16 17:58:19'),
-(6, 'CS Two', 'cs2@lms.com', '$2b$12$BARBagZbum3Bsok453JM0OJtrccGnZydq1MkkZ.jEUAEIUAf5GPhO', 3, 'active', '2025-10-16 17:58:19'),
-(7, 'Lecturer One', 'lec1@lms.com', '$2b$12$BARBagZbum3Bsok453JM0OJtrccGnZydq1MkkZ.jEUAEIUAf5GPhO', 4, 'active', '2025-10-16 17:58:19'),
-(8, 'Lecturer Two', 'lec2@lms.com', '$2b$12$BARBagZbum3Bsok453JM0OJtrccGnZydq1MkkZ.jEUAEIUAf5GPhO', 4, 'active', '2025-10-16 17:58:19'),
-(9, 'Student One', 'student1@lms.com', '$2b$12$uOQbMFjZhq7gqZi2j6vtL.dZu/M11Z4rivqEWExbD.HNkTg2sfkwO', 5, 'active', '2025-10-18 16:07:30'),
-(10, 'Student Two', 'student2@lms.com', '$2b$12$uOQbMFjZhq7gqZi2j6vtL.dZu/M11Z4rivqEWExbD.HNkTg2sfkwO', 5, 'active', '2025-10-18 16:07:30');
+-- MANAGER (role_id = 1)
+INSERT INTO USERS (name, email, password_hash, role_id, status, created_at)
+VALUES ('Manager One', 'manager1@lms.com', '$2b$12$gvcL/dWGjt.M4jXVYG02Wu9s2FHy0zR2X7lJKQGose.7X0DArgEaC', 1, 'active', '2025-10-22 13:10:14');
+INSERT INTO USERS (name, email, password_hash, role_id, status, created_at)
+VALUES ('Manager Two', 'manager2@lms.com', '$2b$12$gvcL/dWGjt.M4jXVYG02Wu9s2FHy0zR2X7lJKQGose.7X0DArgEaC', 1, 'active', '2025-10-22 13:10:14');
 
+-- TC (role_id = 2)
+INSERT INTO USERS (name, email, password_hash, role_id, status, created_at)
+VALUES ('TC One', 'tc1@lms.com', '$2b$12$gvcL/dWGjt.M4jXVYG02Wu9s2FHy0zR2X7lJKQGose.7X0DArgEaC', 2, 'active', '2025-10-22 13:10:14');
+INSERT INTO USERS (name, email, password_hash, role_id, status, created_at)
+VALUES ('TC Two', 'tc2@lms.com', '$2b$12$gvcL/dWGjt.M4jXVYG02Wu9s2FHy0zR2X7lJKQGose.7X0DArgEaC', 2, 'active', '2025-10-22 13:10:14');
+
+-- CS (role_id = 3)
+INSERT INTO USERS (name, email, password_hash, role_id, status, created_at)
+VALUES ('CS One', 'cs1@lms.com', '$2b$12$gvcL/dWGjt.M4jXVYG02Wu9s2FHy0zR2X7lJKQGose.7X0DArgEaC', 3, 'active', '2025-10-22 13:10:14');
+INSERT INTO USERS (name, email, password_hash, role_id, status, created_at)
+VALUES ('CS Two', 'cs2@lms.com', '$2b$12$gvcL/dWGjt.M4jXVYG02Wu9s2FHy0zR2X7lJKQGose.7X0DArgEaC', 3, 'active', '2025-10-22 13:10:14');
+
+-- LEC (role_id = 4)
+INSERT INTO USERS (name, email, password_hash, role_id, status, created_at)
+VALUES ('Lecturer One', 'lec1@lms.com', '$2b$12$gvcL/dWGjt.M4jXVYG02Wu9s2FHy0zR2X7lJKQGose.7X0DArgEaC', 4, 'active', '2025-10-22 13:10:14');
+INSERT INTO USERS (name, email, password_hash, role_id, status, created_at)
+VALUES ('Lecturer Two', 'lec2@lms.com', '$2b$12$gvcL/dWGjt.M4jXVYG02Wu9s2FHy0zR2X7lJKQGose.7X0DArgEaC', 4, 'active', '2025-10-22 13:10:14');
+
+-- STUDENT (role_id = 5)
+INSERT INTO USERS (name, email, password_hash, role_id, status, created_at)
+VALUES ('Student One', 'student1@lms.com', '$2b$12$gvcL/dWGjt.M4jXVYG02Wu9s2FHy0zR2X7lJKQGose.7X0DArgEaC', 5, 'active', '2025-10-22 13:10:14');
+INSERT INTO USERS (name, email, password_hash, role_id, status, created_at)
+VALUES ('Student Two', 'student2@lms.com', '$2b$12$gvcL/dWGjt.M4jXVYG02Wu9s2FHy0zR2X7lJKQGose.7X0DArgEaC', 5, 'active', '2025-10-22 13:10:14');
 --
 -- Chỉ mục cho các bảng đã đổ
 --

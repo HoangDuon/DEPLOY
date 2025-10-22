@@ -8,6 +8,7 @@ class Lecturer(Base):
     lecturer_id = Column(Integer, primary_key=True, autoincrement=True)
     user_id = Column(Integer, ForeignKey("USERS.user_id", onupdate="CASCADE", ondelete="CASCADE"), unique=True, nullable=False)
     department = Column(String(100))
+    total_hours = Column(Integer, nullable=True)
 
     user = relationship("User", back_populates="lecturer")
     classes = relationship("Class", back_populates="lecturer")

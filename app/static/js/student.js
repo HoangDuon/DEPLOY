@@ -1,6 +1,52 @@
-document.addEventListener('DOMContentLoaded', () => {
-    
+document.addEventListener('DOMContentLoaded', async () => {
     console.log(sessionStorage.getItem("loggedInUser"));
+
+    const state = {
+        total_class: 0,
+        avg_grade: 0,
+        total_absent: 0,
+        schedule: null
+    }
+
+    const user = JSON.parse(sessionStorage.getItem("loggedInUser"));
+    const token = sessionStorage.getItem("accessToken");
+
+    if (!user || !token) {
+        alert("Phiên đăng nhập hết hạn, vui lòng đăng nhập lại!");
+        window.location.href = "login.html";
+        return;
+    }
+
+    console.log(user);
+    console.log(token);
+
+    try {
+        const response = await fetch(`http://127.0.0.1:8000/student/dashboard/${user.id}`, {
+            method: "GET",
+            headers: {
+                "Content-Type": "application/json",
+                "Authorization": `Bearer ${token}`
+            }
+        });
+
+        if (!response) {
+            throw new Error(`Request failed: ${response.status}`);
+        }
+
+        const dashboardData = await response.json();
+
+        console.log(dashboardData);
+
+        state.total_class = dashboardData.overview.total_class;
+        state.avg_grade = dashboardData.overview.avg_grade;
+        state.total_absent = dashboardData.overview.total_absent;
+        state.schedule = dashboardData.schedule;
+
+        // console.log(state);
+    } catch (error) {
+        console.log("Loi nhaaa");
+        console.log(error);
+    }
 
     // ==================================================================
     // DỮ LIỆU MẪU (MOCK DATA) - ĐÃ CẬP NHẬT
@@ -154,14 +200,14 @@ document.addEventListener('DOMContentLoaded', () => {
         // ==================================================================
         renderSummary() {
             // ... (Logic tính toán GPA và Absent giữ nguyên)
-            const totalClasses = MOCK_DATA.classes.length;
-            let totalAbsent = 0;
+            const totalClasses = state.total_class;
+            let totalAbsent = state.total_absent;
             let totalGpas = 0;
             let gpaCount = 0;
 
             MOCK_DATA.classes.forEach(cls => {
-                const attendanceRecords = MOCK_DATA.attendance[cls.id] || [];
-                totalAbsent += attendanceRecords.filter(a => a.status === 'absent').length;
+                // const attendanceRecords = MOCK_DATA.attendance[cls.id] || [];
+                // totalAbsent += attendanceRecords.filter(a => a.status === 'absent').length;
 
                 const gpa = StudentDashboardApp.Helper.calculateGPA(cls.id);
                 if (gpa !== 'N/A') {
@@ -170,10 +216,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             });
 
-            const overallGPA = gpaCount > 0 ? (totalGpas / gpaCount).toFixed(2) : '0.0';
-
             document.getElementById('total-classes').textContent = totalClasses;
-            document.getElementById('avg-gpa').textContent = overallGPA;
+            // document.getElementById('avg-gpa').textContent = overallGPA;
+            document.getElementById('avg-gpa').textContent = state.avg_grade.toFixed(2);
             document.getElementById('absent-count').textContent = totalAbsent;
         },
         
@@ -195,35 +240,73 @@ document.addEventListener('DOMContentLoaded', () => {
                 this.loadAnnouncements();
             },
 
-            loadAnnouncements() {
-                const announcementsList = this.DOM.announcementsList;
-                if (!announcementsList) return;
-                
-                const relevantAnnouncements = MOCK_DATA.announcements
-                    .filter(a => a.role === 'student' || a.role === 'all')
-                    .sort((a, b) => new Date(b.date) - new Date(a.date));
+async loadAnnouncements() {
+    const announcementsList = this.DOM.announcementsList;
+    if (!announcementsList) return;
 
-                announcementsList.innerHTML = '';
+    // Hiển thị thông báo đang tải
+    announcementsList.innerHTML = `
+        <p style="padding: 15px; text-align: center; color: gray;">Đang tải thông báo...</p>
+    `;
 
-                if (relevantAnnouncements.length === 0) {
-                    announcementsList.innerHTML = '<p style="padding: 15px; text-align: center;">Hiện chưa có thông báo mới nào.</p>';
-                    return;
-                }
+    try {
+        // 🔹 Gọi API thật — không cần truyền gì
+        const response = await fetch("http://127.0.0.1:8000/notify/notifications", {
+            method: "GET",
+            headers: {
+                "Content-Type": "application/json",
+                "Authorization": `Bearer ${token}` // có thể bỏ nếu không yêu cầu xác thực
+            }
+        });
 
-                relevantAnnouncements.forEach(ann => {
-                    const dateObj = new Date(ann.date);
-                    const formattedDate = `${dateObj.toLocaleDateString('vi-VN')} ${dateObj.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}`;
-                    
-                    const announcementHTML = `
-                        <div class="card announcement-card" style="margin-bottom: 15px; border-left: 5px solid #1e40af;">
-                            <h4>${ann.title}</h4>
-                            <p style="margin-bottom: 5px;">${ann.content}</p>
-                            <small style="color: #6c757d;"><i class="fas fa-clock"></i> ${formattedDate}</small>
-                        </div>
-                    `;
-                    announcementsList.insertAdjacentHTML('beforeend', announcementHTML);
-                });
-            },
+        if (!response.ok) {
+            throw new Error(`Không thể tải thông báo (HTTP ${response.status})`);
+        }
+
+        const notifications = await response.json();
+
+        // 🔹 Nếu không có dữ liệu
+        if (!notifications || notifications.length === 0) {
+            announcementsList.innerHTML = `
+                <p style="padding: 15px; text-align: center;">Hiện chưa có thông báo nào.</p>
+            `;
+            return;
+        }
+
+        // 🔹 Sắp xếp theo ngày mới nhất
+        notifications.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+
+        // 🔹 Render từng thông báo
+        announcementsList.innerHTML = '';
+        notifications.forEach(noti => {
+            const dateObj = new Date(noti.created_at);
+            const formattedDate = `${dateObj.toLocaleDateString('vi-VN')} ${dateObj.toLocaleTimeString('vi-VN', {
+                hour: '2-digit',
+                minute: '2-digit'
+            })}`;
+
+            const announcementHTML = `
+                <div class="card announcement-card" 
+                    style="margin-bottom: 15px; border-left: 5px solid #1e40af; padding: 10px 15px;">
+                    <h4>${noti.title}</h4>
+                    <p style="margin-bottom: 5px;">${noti.message}</p>
+                    <small style="color: #6c757d;">
+                        <i class="fas fa-clock"></i> ${formattedDate}
+                    </small>
+                </div>
+            `;
+            announcementsList.insertAdjacentHTML('beforeend', announcementHTML);
+        });
+
+    } catch (error) {
+        console.error("Lỗi khi tải thông báo:", error);
+        announcementsList.innerHTML = `
+            <p style="padding: 15px; text-align: center; color: red;">
+                Lỗi khi tải thông báo. Vui lòng thử lại sau.
+            </p>
+        `;
+    }
+},
 
             switchTab(targetTab) {
                 this.DOM.tabs.forEach(btn => {
@@ -237,6 +320,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 
                 if (targetTab === 'schedule-view') {
                     this.parent.Schedule.renderSchedule();
+                }
+
+                if (targetTab === "my-classes") {
+                    this.parent.ClassManagement.renderClassList();
                 }
             },
 
@@ -252,64 +339,161 @@ document.addEventListener('DOMContentLoaded', () => {
         // ==================================================================
         // MODULE THỜI KHÓA BIỂU
         // ==================================================================
-        Schedule: {
-            // ... (Logic giữ nguyên)
-            init() {
-                this.renderSchedule();
-                this.bindEvents();
-            },
+Schedule: {
+    currentWeekOffset: 0, // ⚡ Lưu offset tuần hiện tại (0 = tuần này, +1 = tuần sau)
 
-            renderSchedule() {
-                const dayColumns = document.querySelectorAll('#student-schedule-body .day-column');
-                dayColumns.forEach(col => col.innerHTML = '');
+    init() {
+        this.renderSchedule();
+        this.bindEvents();
+    },
 
-                MOCK_DATA.classes.forEach(cls => {
-                    cls.schedule.forEach(item => {
-                        const dayKey = this.getDayKey(item.day);
-                        const [startTimeStr, endTimeStr] = item.time.split('-');
-                        
-                        const startHour = parseInt(startTimeStr.split(':')[0]);
-                        const endHour = parseInt(endTimeStr.split(':')[0]);
+    // =====================================
+    // HÀM RENDER LỊCH
+    // =====================================
+renderSchedule() {
+    const dayColumns = document.querySelectorAll('#student-schedule-body .day-column');
+    dayColumns.forEach(col => col.innerHTML = '');
 
-                        const duration = endHour - startHour; 
-                        const topOffset = (startHour - 7) * 40; 
-                        const height = duration * 40;
+    if (!state.schedule || state.schedule.length === 0) {
+        const mondayCol = document.querySelector('.day-column[data-day="monday"]');
+        mondayCol.innerHTML = `<p style="text-align:center; color:gray; margin-top:20px;">Không có lịch học nào trong tuần này.</p>`;
+        return;
+    }
 
-                        const col = document.querySelector(`.day-column[data-day="${dayKey}"]`);
-                        if (col) {
-                            const event = document.createElement('div');
-                            event.className = 'schedule-event';
-                            event.style.top = `${topOffset}px`;
-                            event.style.height = `${height}px`;
-                            event.style.backgroundColor = '#dbeafe'; 
-                            event.style.borderLeft = '3px solid #1e40af';
-                            event.innerHTML = `
-                                <strong>${cls.name} (${cls.id})</strong><br>
-                                <small>${item.time}</small>
-                            `;
-                            col.appendChild(event);
-                        }
-                    });
-                });
-            },
+    // 🔹 Tính toán tuần hiện tại
+    const today = new Date();
+    const monday = new Date(today);
+    monday.setDate(today.getDate() - ((today.getDay() + 6) % 7)); // ra thứ Hai
+    monday.setHours(0, 0, 0, 0); // reset giờ
+    const weekStart = new Date(monday);
+    weekStart.setDate(monday.getDate() + this.currentWeekOffset * 7);
+    const weekEnd = new Date(weekStart);
+    weekEnd.setDate(weekStart.getDate() + 6);
+    weekEnd.setHours(23, 59, 59, 999);
 
-            getDayKey(vietnameseDay) {
-                const map = {
-                    'Thứ Hai': 'monday', 'Thứ Ba': 'tuesday', 'Thứ Tư': 'wednesday',
-                    'Thứ Năm': 'thursday', 'Thứ Sáu': 'friday', 'Thứ Bảy': 'saturday',
-                    'Chủ Nhật': 'sunday'
-                };
-                return map[vietnameseDay] || '';
-            },
+    // 🔹 Cập nhật hiển thị tuần
+    const weekDisplay = document.getElementById("week-display");
+    if (weekDisplay) {
+        const formatDate = (d) => `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}`;
+        weekDisplay.textContent = `${formatDate(weekStart)} - ${formatDate(weekEnd)}`;
+    }
 
-            bindEvents() {
-                const prevWeekBtn = document.getElementById('prev-week');
-                const nextWeekBtn = document.getElementById('next-week');
+    // 🔹 Hàm xác định ngày (monday, tuesday,...)
+    const getDayKey = (date) => {
+        const day = new Date(date).getDay();
+        return ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'][day];
+    };
 
-                if(prevWeekBtn) prevWeekBtn.addEventListener('click', () => alert('Mô phỏng: Đang chuyển về tuần trước...'));
-                if(nextWeekBtn) nextWeekBtn.addEventListener('click', () => alert('Mô phỏng: Đang chuyển sang tuần sau...'));
+    // 🔹 Highlight ngày hôm nay
+    dayColumns.forEach(c => c.classList.remove('highlight-today'));
+    if (this.currentWeekOffset === 0) {
+        const todayKey = getDayKey(new Date());
+        const todayCol = document.querySelector(`.day-column[data-day="${todayKey}"]`);
+        if (todayCol) todayCol.classList.add('highlight-today');
+    }
+
+// 🔹 Cập nhật ngày dưới mỗi thứ
+const dayDateEls = document.querySelectorAll('[data-day-date]');
+if (dayDateEls.length > 0) {
+    const mondayOfWeek = new Date(weekStart);
+    dayDateEls.forEach((el, idx) => {
+        const day = new Date(mondayOfWeek);
+        day.setDate(mondayOfWeek.getDate() + idx); // tăng dần từ Thứ Hai → CN
+        el.textContent = `${String(day.getDate()).padStart(2, '0')}/${String(day.getMonth() + 1).padStart(2, '0')}`;
+    });
+}
+
+
+    // 🔹 Render các lớp học
+    state.schedule.forEach(item => {
+        const baseDate = new Date(item.schedule);
+        baseDate.setHours(baseDate.getHours()); // fix lệch UTC → VN
+        baseDate.setMinutes(0);
+
+        for (let i = 0; i < 4; i++) {
+            const classDate = new Date(baseDate);
+            classDate.setDate(baseDate.getDate() + i * 7);
+
+            // So sánh chỉ theo ngày
+            const classDateStartOfDay = new Date(classDate);
+            classDateStartOfDay.setHours(0, 0, 0, 0);
+
+            if (classDateStartOfDay >= weekStart && classDateStartOfDay <= weekEnd) {
+                const end = new Date(classDate.getTime() + 2 * 60 * 60 * 1000);
+                const dayKey = getDayKey(classDate);
+                const column = document.querySelector(`.day-column[data-day="${dayKey}"]`);
+                if (!column) continue;
+
+                const startHour = classDate.getHours();
+                const endHour = end.getHours();
+                const startMinute = classDate.getMinutes();
+                const topOffset = ((startHour - 7) * 40) + (startMinute / 60) * 40;
+                const height = (endHour - startHour) * 40;
+
+                const event = document.createElement('div');
+                event.className = 'schedule-event';
+                event.style.position = 'absolute';
+                event.style.top = `${topOffset}px`;
+                event.style.height = `${height}px`;
+                event.style.left = '5px';
+                event.style.right = '5px';
+                event.style.borderRadius = '8px';
+                event.style.padding = '10px';
+                event.style.backgroundColor = '#dbeafe';
+                event.style.borderLeft = '4px solid #1e40af';
+                event.style.color = '#1e3a8a';
+                event.style.fontSize = '13px';
+                event.style.overflow = 'hidden';
+                event.style.boxShadow = '0 1px 3px rgba(0,0,0,0.1)';
+                event.innerHTML = `
+                    <strong>${item.class_name}</strong><br>
+                    <small>${classDate.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })} - 
+                    ${end.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}</small>
+                `;
+
+                column.style.position = 'relative';
+                column.appendChild(event);
             }
-        },
+        }
+    });
+},
+
+
+    // =====================================
+    // HÀM LIÊN KẾT NÚT TUẦN
+    // =====================================
+    bindEvents() {
+        const prevWeekBtn = document.getElementById('prev-week');
+        const nextWeekBtn = document.getElementById('next-week');
+
+        if (prevWeekBtn) {
+            prevWeekBtn.addEventListener('click', () => {
+                this.currentWeekOffset--;
+                this.renderSchedule();
+            });
+        }
+
+        if (nextWeekBtn) {
+            nextWeekBtn.addEventListener('click', () => {
+                this.currentWeekOffset++;
+                this.renderSchedule();
+            });
+        }
+    },
+
+    // =====================================
+    // (OPTIONAL) HÀM MAP NGÀY TIẾNG VIỆT
+    // =====================================
+    getDayKey(vietnameseDay) {
+        const map = {
+            'Thứ Hai': 'monday', 'Thứ Ba': 'tuesday', 'Thứ Tư': 'wednesday',
+            'Thứ Năm': 'thursday', 'Thứ Sáu': 'friday', 'Thứ Bảy': 'saturday',
+            'Chủ Nhật': 'sunday'
+        };
+        return map[vietnameseDay] || '';
+    }
+},
+
         
         // ==================================================================
         // MODULE GỬI PHẢN HỒI (MỚI)
@@ -431,6 +615,31 @@ document.addEventListener('DOMContentLoaded', () => {
         
         // ... (ClassManagement giữ nguyên)
         ClassManagement: {
+            classes: [],
+
+            async fetchStudentClasses(){
+                try{
+                    const response = await fetch(`http://127.0.0.1:8000/student/class?user_id=${user.id}`, {
+                        method: "GET",
+                        headers: {
+                            "Content-Type": "application/json",
+                            "Authorization": `Bearer ${token}`
+                        }
+                    });
+
+                    if (!response.ok) {
+                        throw new Error("Failed to fetch classes: ${response.status}");
+                    }
+
+                    const data = await response.json();
+                    return data;
+                }   
+                catch (error){
+                    console.log("Loi lay lop");
+                    console.log(error);
+                }
+            },
+
             init() {
                 this.DOM = {
                     listView: document.getElementById('class-list-view'),
@@ -447,73 +656,219 @@ document.addEventListener('DOMContentLoaded', () => {
                 this.bindEvents();
             },
 
-            renderClassList() {
-                this.DOM.cardContainer.innerHTML = '';
-                MOCK_DATA.classes.forEach(cls => {
-                    const scheduleSummary = cls.schedule.map(s => `${s.day.slice(0, 2)} (${s.time})`).join(', ');
-                    const card = document.createElement('div');
-                    card.className = 'card class-card class-card-student';
-                    card.dataset.id = cls.id;
-                    card.innerHTML = `
-                        <h3>${cls.name} (${cls.id})</h3>
-                        <p><i class="fas fa-chalkboard-teacher"></i> Giáo viên: ${cls.teacher}</p>
-                        <p><i class="fas fa-calendar-alt"></i> Lịch: ${scheduleSummary}</p>
-                        <button class="btn btn-primary view-detail-btn" data-id="${cls.id}">Xem chi tiết</button>
-                    `;
-                    this.DOM.cardContainer.appendChild(card);
-                });
-            },
+async renderClassList() {
+    this.DOM.cardContainer.innerHTML = `
+        <p style="text-align:center; padding:20px; color:gray;">Đang tải danh sách lớp...</p>
+    `;
 
-            showDetail(classId) {
-                const cls = MOCK_DATA.classes.find(c => c.id === classId);
-                if (!cls) return;
+    const classData = await this.fetchStudentClasses();
+    this.classes = classData || [];
+
+    if (!classData || classData.length === 0) {
+        this.DOM.cardContainer.innerHTML = `
+            <p style="text-align:center; padding:20px; color:gray;">Bạn chưa đăng ký lớp học nào.</p>
+        `;
+        return;
+    }
+
+    this.DOM.cardContainer.innerHTML = '';
+classData.forEach(cls => {
+    const startDate = new Date(cls.schedule);
+    
+    // Tạo thời gian kết thúc buổi học (+2 giờ)
+    const endTime = new Date(startDate.getTime() + 2 * 60 * 60 * 1000);
+
+    // Ngày kết thúc khóa học (sau 4 tuần)
+    const endDate = new Date(startDate.getTime());
+    endDate.setDate(startDate.getDate() + 7 * 4);
+
+    // Format ngày và giờ
+    const formatDate = (d) => 
+        `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}/${d.getFullYear()}`;
+
+    const formatTime = (d) => 
+        d.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' });
+
+    const card = document.createElement('div');
+    card.className = 'card class-card class-card-student';
+    card.dataset.id = cls.class_id;
+
+    card.innerHTML = `
+        <h3>${cls.class_name}</h3>
+        <p><i class="fas fa-chalkboard-teacher"></i> Giáo viên: ${cls.lecturer_name}</p>
+        <p><i class="fas fa-calendar-alt"></i> 
+            Lịch: ${formatDate(startDate)} - ${formatDate(endDate)} 
+            (${formatTime(startDate)} - ${formatTime(endTime)})
+        </p>
+        <button class="btn btn-primary view-detail-btn" data-id="${cls.class_id}">Xem chi tiết</button>
+    `;
+
+    this.DOM.cardContainer.appendChild(card);
+});
+
+},
+
+            async showDetail(classId) {
+                const cls = this.classes.find(c => String(c.class_id) === String(classId));
+                if (!cls) {
+                    console.warn("Không tìm thấy lớp có ID:", classId);
+                    return;
+                }
 
                 this.currentClassId = classId;
-                this.DOM.detailTitle.textContent = `${cls.name} (${cls.id})`;
+                this.DOM.detailTitle.textContent = `${cls.class_name} (${cls.class_id})`;
                 
                 this.switchTab('my-grades'); 
                 
-                this.renderGrades(classId);
-                this.renderAttendance(classId);
+                await this.renderGrades(classId);
+                await this.renderAttendance(classId);
 
                 this.DOM.listView.style.display = 'none';
                 this.DOM.detailView.style.display = 'block';
             },
 
-            renderGrades(classId) {
-                const grades = MOCK_DATA.grades[classId] || [];
-                this.DOM.gradeBody.innerHTML = '';
-                
-                grades.forEach(g => {
-                    const scoreDisplay = g.score !== null ? g.score.toFixed(1) : '—';
-                    const row = `
-                        <tr>
-                            <td>${g.assignment}</td>
-                            <td><span style="font-weight: bold; color: ${g.score === null ? '#aaa' : '#4a6cf7'};">${scoreDisplay}</span></td>
-                            <td>${g.weight * 100}%</td>
-                        </tr>
-                    `;
-                    this.DOM.gradeBody.insertAdjacentHTML('beforeend', row);
-                });
+async renderGrades(classId) {
+    try {
+        const response = await fetch(`http://127.0.0.1:8000/student/class/grade?class_id=${classId}&user_id=${user.id}`, {
+            method: "GET",
+            headers: {
+                "Content-Type": "application/json",
+                "Authorization": `Bearer ${token}`
+            }
+        });
 
-                this.DOM.finalGpaCell.textContent = StudentDashboardApp.Helper.calculateGPA(classId);
-            },
+        if (!response.ok) {
+            throw new Error(`Không thể lấy điểm của lớp ${classId} (HTTP ${response.status})`);
+        }
 
-            renderAttendance(classId) {
-                const attendance = MOCK_DATA.attendance[classId] || [];
-                this.DOM.attendanceBody.innerHTML = '';
+        const grades = await response.json(); // ✅ nhớ await
+        console.log("📘 Dữ liệu điểm nhận được:", grades);
 
-                attendance.forEach(a => {
-                    const row = `
-                        <tr>
-                            <td>Buổi ${a.session}</td>
-                            <td>${StudentDashboardApp.Helper.formatDate(a.date)}</td>
-                            <td>${StudentDashboardApp.Helper.getStatusTag(a.status)}</td>
-                        </tr>
-                    `;
-                    this.DOM.attendanceBody.insertAdjacentHTML('beforeend', row);
-                });
-            },
+        // Nếu không có điểm
+        if (!grades || grades.length === 0) {
+            this.DOM.gradeBody.innerHTML = `
+                <tr>
+                    <td colspan="3" style="text-align:center; color:gray;">
+                        Chưa có điểm nào được cập nhật.
+                    </td>
+                </tr>
+            `;
+            this.DOM.finalGpaCell.textContent = "—";
+            return;
+        }
+
+        // ✅ Hiển thị bảng điểm
+        this.DOM.gradeBody.innerHTML = '';
+
+        let totalScore = 0;
+        let totalWeight = 0;
+
+        grades.forEach(g => {
+            // Quy định trọng số
+            let weight = 0;
+            if (g.grade_type === "process") weight = 0.4;
+            else if (g.grade_type === "project") weight = 0.6;
+
+            // Tính GPA
+            if (g.grade !== null) {
+                totalScore += g.grade * weight;
+                totalWeight += weight;
+            }
+
+            // Format dữ liệu hiển thị
+            const scoreDisplay = g.grade !== null ? g.grade.toFixed(1) : '—';
+            const remarksDisplay = g.remarks ? `<small style="color:gray;">${g.remarks}</small>` : '';
+
+            const row = `
+                <tr>
+                    <td>
+                        ${g.grade_type === "process" ? "Điểm quá trình" : "Điểm dự án"}<br>
+                        ${remarksDisplay}
+                    </td>
+                    <td><span style="font-weight:bold; color:${g.grade < 5 ? '#dc2626' : '#1e3a8a'};">${scoreDisplay}</span></td>
+                    <td>${weight * 100}%</td>
+                </tr>
+            `;
+
+            this.DOM.gradeBody.insertAdjacentHTML('beforeend', row);
+        });
+
+        // ✅ Tính điểm trung bình
+        const finalGPA = totalWeight > 0 ? (totalScore / totalWeight).toFixed(2) : '—';
+        this.DOM.finalGpaCell.textContent = finalGPA;
+
+    } catch (error) {
+        console.error("❌ Lỗi khi tải điểm:", error);
+        this.DOM.gradeBody.innerHTML = `
+            <tr>
+                <td colspan="3" style="text-align:center; color:red;">
+                    Không thể tải dữ liệu điểm.
+                </td>
+            </tr>
+        `;
+        this.DOM.finalGpaCell.textContent = "—";
+    }
+},
+
+async renderAttendance(classId) {
+    try {
+        // Hiển thị trạng thái loading
+        this.DOM.attendanceBody.innerHTML = `
+            <tr><td colspan="3" style="text-align:center; color:gray;">Đang tải dữ liệu điểm danh...</td></tr>
+        `;
+
+        // 🔹 Gọi API lấy điểm danh
+        const response = await fetch(
+            `http://127.0.0.1:8000/student/class/attendance?class_id=${classId}&user_id=${user.id}`,
+            {
+                method: "GET",
+                headers: {
+                    "Content-Type": "application/json",
+                    "Authorization": `Bearer ${token}`
+                }
+            }
+        );
+
+        if (!response.ok) {
+            throw new Error(`Không thể lấy dữ liệu điểm danh (HTTP ${response.status})`);
+        }
+
+        const attendanceData = await response.json();
+
+        // 🔹 Nếu không có dữ liệu
+        if (!attendanceData || attendanceData.length === 0) {
+            this.DOM.attendanceBody.innerHTML = `
+                <tr><td colspan="3" style="text-align:center; color:gray;">Chưa có dữ liệu điểm danh.</td></tr>
+            `;
+            return;
+        }
+
+        // 🔹 Xóa nội dung cũ
+        this.DOM.attendanceBody.innerHTML = '';
+
+        // 🔹 Sắp xếp theo ngày tăng dần (đề phòng backend trả về không đúng thứ tự)
+        attendanceData.sort((a, b) => new Date(a.date) - new Date(b.date));
+
+        // 🔹 Render từng dòng, buổi sẽ tự tăng
+        attendanceData.forEach((a, index) => {
+            const row = `
+                <tr>
+                    <td>Buổi ${index + 1}</td>
+                    <td>${StudentDashboardApp.Helper.formatDate(a.date)}</td>
+                    <td>${StudentDashboardApp.Helper.getStatusTag(a.status)}</td>
+                </tr>
+            `;
+            this.DOM.attendanceBody.insertAdjacentHTML('beforeend', row);
+        });
+    } 
+    catch (error) {
+        console.error("Lỗi khi tải điểm danh:", error);
+        this.DOM.attendanceBody.innerHTML = `
+            <tr><td colspan="3" style="text-align:center; color:red;">Lỗi khi tải dữ liệu điểm danh!</td></tr>
+        `;
+    }
+},
+
 
             switchTab(targetTab) {
                 this.DOM.tabs.forEach(btn => {

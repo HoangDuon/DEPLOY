@@ -26,9 +26,6 @@ def get_student_dashboard(user_id: int):
     }
 
 
-
-    pass
-
 @router.get("/class", response_model=list[ClassInfo])
 def get_classes_for_student(user_id: int):
     classes = get_view_schedule_of_student(user_id)
@@ -36,13 +33,13 @@ def get_classes_for_student(user_id: int):
     return classes
 
 @router.get("/class/grade", response_model= list[GradeInfo])
-def get_classGrade_for_student(class_assigment_id: int):
-    grade = get_classes_grades_of_student(class_assigment_id)
+def get_classGrade_for_student(class_id: int, user_id: int):
+    grade = get_classes_grades_of_student(class_id, user_id)
 
     return grade
 
-@router.get("/class/attendance", response_model= AttendanceInfo)
-def get_classAttendance_for_student(class_assigment_id: int):
-    attendance = get_classes_attendance_of_student(class_assigment_id)
+@router.get("/class/attendance", response_model= list[AttendanceInfo])
+def get_classAttendance_for_student(class_id: int, user_id: int):
+    attendance = get_classes_attendance_of_student(class_id, user_id)
 
     return attendance

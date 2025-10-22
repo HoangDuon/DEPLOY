@@ -31,75 +31,56 @@ document.addEventListener('DOMContentLoaded', () => {
             const password = this.DOM.passwordInput.value;
 
             try {
-                const login_respone = await fetch("http://127.0.0.1:8000/auth/login", {
+                const login_response = await fetch("http://127.0.0.1:8000/auth/login", {
                     method: "POST",
                     headers: { "Content-Type": "application/json"},
-                    body: JSON.stringify({username: username, password: password})
+                    body: JSON.stringify({ username, password })
                 });
 
-                if (!login_respone.ok) {
-                    const errorDate = await login_respone.json();
-                    throw new Error("Tên đăng nhập hoặc mật khẩu không đúng" || errorDate.detail);
+                if (!login_response.ok) {
+                    const errorData = await login_response.json();
+                    throw new Error(errorData.detail || "Tên đăng nhập hoặc mật khẩu không đúng");
                 }
 
-                const data = await login_respone.json();
+                const data = await login_response.json();
+                console.log("✅ Login success:", data);
 
+                // Lưu token + user
                 sessionStorage.setItem("accessToken", data.access_token);
-
                 const state = {
                     id: data.user_id,
                     fullName: data.user_name,
                     role: data.user_role
                 };
+                sessionStorage.setItem("loggedInUser", JSON.stringify(state));
 
-                sessionStorage.setItem("loggedInUser", JSON.stringify(state))
-
+                // Chuyển trang
                 this.redirectToRoleDashboard(data.user_role);
+
             } catch (error) {
-                console.error("Login error:", err);
-                this.onLoginFailure(err.message);
+                console.error("Login error:", error);
+                this.onLoginFailure(error.message);
             }
-        },
-
-        onLoginSuccess(userData) {
-            const userToStore = {
-                username: userData.username,
-                role: userData.role,
-                fullName: userData.fullName
-            };
-
-            sessionStorage.setItem('loggedInUser', JSON.stringify(userToStore));
-            this.redirectToRoleDashboard(userData.role);
-        },
-
-        redirectToRoleDashboard(role) {
-            let dashboardUrl = 'login.html';
-
-            switch (role) {
-                case 'manager':
-                    dashboardUrl = 'manager_dashboard.html';
-                    break;
-                case 'tc':
-                    dashboardUrl = 'tc_dashboard.html';
-                    break;
-                case 'lec':
-                    dashboardUrl = 'lec_dashboard.html';
-                    break;
-                case 'cs':
-                    dashboardUrl = 'cs_dashboard.html';
-                    break;
-                case 'student':
-                    dashboardUrl = 'student.html';
-                    break;
-            }
-
-            window.location.href = dashboardUrl;
         },
 
         onLoginFailure() {
             this.DOM.errorMessage.textContent = 'Tên đăng nhập hoặc mật khẩu không đúng.';
             this.DOM.loginForm.classList.add('shake');
             setTimeout(() => this.DOM.loginForm.classList.remove('shake'), 500);
+        },
+
+        redirectToRoleDashboard(role) {
+            let dashboardUrl = 'login.html';
+
+            switch (role) {
+                case 'manager': dashboardUrl = 'manager_dashboard.html'; break;
+                case 'tc': dashboardUrl = 'tc_dashboard.html'; break;
+                case 'lec': dashboardUrl = 'lec_dashboard.html'; break;
+                case 'cs': dashboardUrl = 'cs_dashboard.html'; break;
+                case 'student': dashboardUrl = 'student.html'; break;
+            }
+
+            window.location.href = dashboardUrl;
         },
 
         clearError() {
@@ -110,7 +91,6 @@ document.addEventListener('DOMContentLoaded', () => {
             const input = this.DOM.passwordInput;
             const icon = this.DOM.togglePasswordIcon;
             const type = input.getAttribute('type') === 'password' ? 'text' : 'password';
-
             input.setAttribute('type', type);
             icon.classList.toggle('fa-eye-slash');
         }
