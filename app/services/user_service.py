@@ -83,3 +83,34 @@ def submit_ticket(user_id: int, user_assigned: int, title: str, issue_type: str,
         return new_ticket
     finally:
         db.close()
+
+def update_password(user_id: int, new_password: str):
+    """
+    Finds a user by user_id, hashes their new password,
+    and updates it in the database.
+    """
+    try:
+        db = SessionLocal()
+
+        # 1. Find the user
+        user = db.query(User).filter(User.user_id == user_id).first()
+
+        if not user:
+            raise HTTPException(status_code=404, detail="User not found")
+
+        # 2. Hash the new password using your existing function
+        new_hashed_password = hash_password(new_password)
+
+        # 3. Update the user's password_hash field
+        user.password_hash = new_hashed_password
+
+        # 4. Commit the changes
+        db.commit()
+        db.refresh(user)
+
+        return user
+    except Exception as e:
+        db.rollback() # Rollback on error
+        raise HTTPException(status_code=500, detail=f"Error updating password: {e}")
+    finally:
+        db.close()
