@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Máy chủ: 127.0.0.1
--- Thời gian đã tạo: Th10 19, 2025 lúc 07:30 PM
+-- Thời gian đã tạo: Th10 23, 2025 lúc 10:46 AM
 -- Phiên bản máy phục vụ: 10.4.32-MariaDB
 -- Phiên bản PHP: 8.2.12
 
@@ -34,21 +34,6 @@ CREATE TABLE `attendance` (
   `status` enum('present','absent','late') NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
---
--- Đang đổ dữ liệu cho bảng `attendance`
---
-
-INSERT INTO `attendance` (`attendance_id`, `assignment_id`, `date`, `status`) VALUES
-(1, 1, '2025-10-10', 'present'),
-(2, 1, '2025-10-12', 'late'),
-(3, 2, '2025-10-11', 'present'),
-(4, 2, '2025-10-14', 'absent'),
-(5, 3, '2025-10-11', 'present'),
-(6, 3, '2025-10-14', 'present'),
-(7, 4, '2025-10-13', 'present'),
-(8, 4, '2025-10-15', 'late'),
-(9, 4, '2025-10-19', 'present');
-
 -- --------------------------------------------------------
 
 --
@@ -66,19 +51,6 @@ CREATE TABLE `classes` (
   `created_at` datetime NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
---
--- Đang đổ dữ liệu cho bảng `classes`
---
-
-INSERT INTO `classes` (`class_id`, `class_name`, `lecturer_id`, `schedule`, `place`, `created_by`, `status`, `created_at`) VALUES
-(1, 'Python Cơ Bản', 2, '2025-10-14 23:36:03.000000', NULL, 1, 'active', '2025-10-19 18:53:07'),
-(2, 'Java Nâng Cao', 2, '2025-10-13 08:36:18.000000', NULL, 1, 'active', '2025-10-19 18:53:07'),
-(3, 'Phân Tích Hệ Thống', 1, '2025-10-08 14:16:32.000000', NULL, 1, 'active', '2025-10-19 18:53:07'),
-(6, 'abc', NULL, '2025-10-19 20:45:00.000000', NULL, 8, 'active', '2025-10-19 17:16:37'),
-(7, 'abc', NULL, '2025-10-19 20:45:00.000000', NULL, 8, 'active', '2025-10-19 17:17:01'),
-(8, 'abc', NULL, '2025-10-19 20:45:00.000000', 'b', 7, 'active', '2025-10-19 17:17:08'),
-(9, 'abc', NULL, '2025-10-19 20:45:00.000000', 'a', 8, 'active', '2025-10-19 17:17:46');
-
 -- --------------------------------------------------------
 
 --
@@ -91,15 +63,21 @@ CREATE TABLE `class_assignments` (
   `student_id` int(11) NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
+-- --------------------------------------------------------
+
 --
--- Đang đổ dữ liệu cho bảng `class_assignments`
+-- Cấu trúc bảng cho bảng `files`
 --
 
-INSERT INTO `class_assignments` (`assignment_id`, `class_id`, `student_id`) VALUES
-(1, 1, 1),
-(2, 2, 1),
-(3, 2, 2),
-(4, 3, 2);
+CREATE TABLE `files` (
+  `file_id` int(11) NOT NULL,
+  `uploader_user_id` int(11) NOT NULL,
+  `original_filename` varchar(255) NOT NULL,
+  `saved_filename` varchar(255) NOT NULL,
+  `file_size` int(11) NOT NULL,
+  `content_type` varchar(100) DEFAULT NULL,
+  `created_at` datetime NOT NULL DEFAULT current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- --------------------------------------------------------
 
@@ -115,20 +93,6 @@ CREATE TABLE `grades` (
   `remarks` text DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
---
--- Đang đổ dữ liệu cho bảng `grades`
---
-
-INSERT INTO `grades` (`grade_id`, `assignment_id`, `grade`, `grade_type`, `remarks`) VALUES
-(1, 1, 5, 'process', 'good'),
-(2, 1, 9.2, 'project', 'Xây dựng project nhỏ hoàn chỉnh.'),
-(3, 2, 8.5, 'process', 'Hiểu Java khá tốt, cần luyện thêm phần OOP.'),
-(4, 2, 8.8, 'project', 'Bài đồ án hoàn chỉnh, trình bày chuyên nghiệp.'),
-(5, 3, 7.8, 'process', 'Chưa nắm chắc phần phân tích yêu cầu.'),
-(6, 3, 8.3, 'project', 'Đồ án khá tốt, nhưng thiếu một vài tính năng.'),
-(7, 4, 9.5, 'process', 'Tham gia đầy đủ, hiểu sâu kiến thức.'),
-(8, 4, 9.8, 'project', 'Bài kiểm tra xuất sắc, trình bày rõ ràng.');
-
 -- --------------------------------------------------------
 
 --
@@ -138,17 +102,23 @@ INSERT INTO `grades` (`grade_id`, `assignment_id`, `grade`, `grade_type`, `remar
 CREATE TABLE `lecturers` (
   `lecturer_id` int(11) NOT NULL,
   `user_id` int(11) NOT NULL,
-  `department` varchar(100) DEFAULT NULL,
-  `total_hours` int(11) DEFAULT NULL
+  `department` varchar(100) DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
+-- --------------------------------------------------------
+
 --
--- Đang đổ dữ liệu cho bảng `lecturers`
+-- Cấu trúc bảng cho bảng `lecturers_attendance`
 --
 
-INSERT INTO `lecturers` (`lecturer_id`, `user_id`, `department`, `total_hours`) VALUES
-(1, 7, 'Công nghệ thông tin', 120),
-(2, 8, 'Khoa học máy tính', 95);
+CREATE TABLE `lecturers_attendance` (
+  `lecturer_attendance_id` int(11) NOT NULL,
+  `lecturer_id` int(11) NOT NULL,
+  `class_id` int(11) NOT NULL,
+  `attendance_date` date NOT NULL,
+  `status` enum('present','absent','late') NOT NULL,
+  `notes` varchar(255) DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- --------------------------------------------------------
 
@@ -164,16 +134,6 @@ CREATE TABLE `notifications` (
   `is_read` tinyint(1) NOT NULL,
   `created_at` datetime NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
-
---
--- Đang đổ dữ liệu cho bảng `notifications`
---
-
-INSERT INTO `notifications` (`notification_id`, `user_id`, `title`, `message`, `is_read`, `created_at`) VALUES
-(1, 1, 'Báo cáo tuần mới', 'Báo cáo tổng hợp hiệu suất giảng viên tuần này đã được tạo.', 0, '2025-10-19 18:53:06'),
-(2, 1, 'Hệ thống cập nhật', 'Phiên bản mới của hệ thống LMS đã được triển khai thành công.', 1, '2025-10-17 18:53:06'),
-(3, 1, 'Yêu cầu duyệt lớp học', 'Có 3 lớp học mới đang chờ bạn duyệt trong phần quản lý lớp.', 0, '2025-10-19 18:53:06'),
-(4, 1, 'Thông báo bảo trì', 'Hệ thống sẽ được bảo trì vào tối thứ Bảy, 22h - 23h.', 1, '2025-10-16 18:53:06');
 
 -- --------------------------------------------------------
 
@@ -203,17 +163,6 @@ CREATE TABLE `roles` (
   `updated_at` datetime DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
---
--- Đang đổ dữ liệu cho bảng `roles`
---
-
-INSERT INTO `roles` (`role_id`, `role_name`, `description`, `created_at`, `updated_at`) VALUES
-(1, 'manager', 'System Manager - quản trị toàn hệ thống', '2025-10-19 18:53:06', NULL),
-(2, 'tc', 'Training Coordinator - điều phối đào tạo', '2025-10-19 18:53:06', NULL),
-(3, 'cs', 'Customer Support - chăm sóc học viên', '2025-10-19 18:53:06', NULL),
-(4, 'lec', 'Lecturer - giảng viên', '2025-10-19 18:53:06', NULL),
-(5, 'student', 'Student - học viên', '2025-10-19 18:53:06', NULL);
-
 -- --------------------------------------------------------
 
 --
@@ -227,13 +176,38 @@ CREATE TABLE `students` (
   `status` enum('active','inactive') NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
+-- --------------------------------------------------------
+
 --
--- Đang đổ dữ liệu cho bảng `students`
+-- Cấu trúc bảng cho bảng `submissions`
 --
 
-INSERT INTO `students` (`student_id`, `user_id`, `enrollment_date`, `status`) VALUES
-(1, 9, '2025-10-18', 'active'),
-(2, 10, '2025-10-18', 'active');
+CREATE TABLE `submissions` (
+  `submission_id` int(11) NOT NULL,
+  `task_id` int(11) NOT NULL,
+  `student_id` int(11) NOT NULL,
+  `submitted_file_id` int(11) NOT NULL,
+  `submission_date` datetime NOT NULL DEFAULT current_timestamp(),
+  `grade` float DEFAULT NULL,
+  `feedback_text` text DEFAULT NULL,
+  `graded_file_id` int(11) DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+-- --------------------------------------------------------
+
+--
+-- Cấu trúc bảng cho bảng `tasks`
+--
+
+CREATE TABLE `tasks` (
+  `task_id` int(11) NOT NULL,
+  `class_id` int(11) NOT NULL,
+  `title` varchar(255) NOT NULL,
+  `description` text DEFAULT NULL,
+  `task_type` enum('material','assignment') NOT NULL,
+  `due_date` datetime DEFAULT NULL,
+  `attached_file_id` int(11) DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- --------------------------------------------------------
 
@@ -253,21 +227,6 @@ CREATE TABLE `tickets` (
   `resolved_at` datetime DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
---
--- Đang đổ dữ liệu cho bảng `tickets`
---
-
-INSERT INTO `tickets` (`ticket_id`, `submitted_by`, `assigned_to`, `issue_type`, `title`, `description`, `status`, `created_at`, `resolved_at`) VALUES
-(1, 3, 1, 'System Bug', 'Lỗi phân công lớp học', 'Không thể phân công giảng viên cho lớp LEC102.', 'open', '2025-10-19 18:53:06', NULL),
-(2, 4, 1, 'Class Request', 'Yêu cầu thêm lớp học mới', 'Cần thêm lớp Python Nâng Cao vào học kỳ này.', 'in_progress', '2025-10-18 18:53:06', NULL),
-(3, 5, 1, 'System Bug', 'Sinh viên không truy cập được LMS', 'Một số sinh viên báo lỗi 500 khi đăng nhập LMS.', 'open', '2025-10-19 18:53:06', NULL),
-(4, 6, 1, 'Account Issue', 'Yêu cầu hỗ trợ tài khoản', 'Sinh viên CS102 quên mật khẩu cần reset.', 'resolved', '2025-10-17 18:53:06', NULL),
-(5, 7, 1, 'System Bug', 'Không xem được danh sách sinh viên', 'Danh sách sinh viên không tải được trong LMS.', 'open', '2025-10-19 18:53:06', NULL),
-(6, 8, 1, 'Request', 'Yêu cầu cấp tài khoản Zoom', 'Cần tài khoản Zoom để giảng dạy trực tuyến.', 'resolved', '2025-10-16 18:53:06', NULL),
-(7, 10, 1, 'Notification Issue', 'Không nhận được email thông báo', 'Không có email khi giảng viên đăng bài mới.', 'open', '2025-10-16 18:53:06', NULL),
-(8, 9, 1, 'Payment Error', 'Lỗi thanh toán học phí', 'Em không thanh toán được học phí qua LMS.', 'resolved', '2025-10-14 18:53:06', NULL),
-(10, 7, 1, 'Class Request', 'Class Assignment Request for Class ID: 4', 'Lecturer with user_id 7 has requested to be assigned to class \'Web cơ bản\' (ID: 4).', 'open', '2025-10-19 14:56:42', NULL);
-
 -- --------------------------------------------------------
 
 --
@@ -284,39 +243,6 @@ CREATE TABLE `users` (
   `created_at` datetime NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
---
--- Đang đổ dữ liệu cho bảng `users`
---
-
--- MANAGER (role_id = 1)
-INSERT INTO USERS (name, email, password_hash, role_id, status, created_at)
-VALUES ('Manager One', 'manager1@lms.com', '$2b$12$gvcL/dWGjt.M4jXVYG02Wu9s2FHy0zR2X7lJKQGose.7X0DArgEaC', 1, 'active', '2025-10-22 13:10:14');
-INSERT INTO USERS (name, email, password_hash, role_id, status, created_at)
-VALUES ('Manager Two', 'manager2@lms.com', '$2b$12$gvcL/dWGjt.M4jXVYG02Wu9s2FHy0zR2X7lJKQGose.7X0DArgEaC', 1, 'active', '2025-10-22 13:10:14');
-
--- TC (role_id = 2)
-INSERT INTO USERS (name, email, password_hash, role_id, status, created_at)
-VALUES ('TC One', 'tc1@lms.com', '$2b$12$gvcL/dWGjt.M4jXVYG02Wu9s2FHy0zR2X7lJKQGose.7X0DArgEaC', 2, 'active', '2025-10-22 13:10:14');
-INSERT INTO USERS (name, email, password_hash, role_id, status, created_at)
-VALUES ('TC Two', 'tc2@lms.com', '$2b$12$gvcL/dWGjt.M4jXVYG02Wu9s2FHy0zR2X7lJKQGose.7X0DArgEaC', 2, 'active', '2025-10-22 13:10:14');
-
--- CS (role_id = 3)
-INSERT INTO USERS (name, email, password_hash, role_id, status, created_at)
-VALUES ('CS One', 'cs1@lms.com', '$2b$12$gvcL/dWGjt.M4jXVYG02Wu9s2FHy0zR2X7lJKQGose.7X0DArgEaC', 3, 'active', '2025-10-22 13:10:14');
-INSERT INTO USERS (name, email, password_hash, role_id, status, created_at)
-VALUES ('CS Two', 'cs2@lms.com', '$2b$12$gvcL/dWGjt.M4jXVYG02Wu9s2FHy0zR2X7lJKQGose.7X0DArgEaC', 3, 'active', '2025-10-22 13:10:14');
-
--- LEC (role_id = 4)
-INSERT INTO USERS (name, email, password_hash, role_id, status, created_at)
-VALUES ('Lecturer One', 'lec1@lms.com', '$2b$12$gvcL/dWGjt.M4jXVYG02Wu9s2FHy0zR2X7lJKQGose.7X0DArgEaC', 4, 'active', '2025-10-22 13:10:14');
-INSERT INTO USERS (name, email, password_hash, role_id, status, created_at)
-VALUES ('Lecturer Two', 'lec2@lms.com', '$2b$12$gvcL/dWGjt.M4jXVYG02Wu9s2FHy0zR2X7lJKQGose.7X0DArgEaC', 4, 'active', '2025-10-22 13:10:14');
-
--- STUDENT (role_id = 5)
-INSERT INTO USERS (name, email, password_hash, role_id, status, created_at)
-VALUES ('Student One', 'student1@lms.com', '$2b$12$gvcL/dWGjt.M4jXVYG02Wu9s2FHy0zR2X7lJKQGose.7X0DArgEaC', 5, 'active', '2025-10-22 13:10:14');
-INSERT INTO USERS (name, email, password_hash, role_id, status, created_at)
-VALUES ('Student Two', 'student2@lms.com', '$2b$12$gvcL/dWGjt.M4jXVYG02Wu9s2FHy0zR2X7lJKQGose.7X0DArgEaC', 5, 'active', '2025-10-22 13:10:14');
 --
 -- Chỉ mục cho các bảng đã đổ
 --
@@ -345,6 +271,14 @@ ALTER TABLE `class_assignments`
   ADD KEY `student_id` (`student_id`);
 
 --
+-- Chỉ mục cho bảng `files`
+--
+ALTER TABLE `files`
+  ADD PRIMARY KEY (`file_id`),
+  ADD UNIQUE KEY `saved_filename` (`saved_filename`),
+  ADD KEY `uploader_user_id` (`uploader_user_id`);
+
+--
 -- Chỉ mục cho bảng `grades`
 --
 ALTER TABLE `grades`
@@ -357,6 +291,14 @@ ALTER TABLE `grades`
 ALTER TABLE `lecturers`
   ADD PRIMARY KEY (`lecturer_id`),
   ADD UNIQUE KEY `user_id` (`user_id`);
+
+--
+-- Chỉ mục cho bảng `lecturers_attendance`
+--
+ALTER TABLE `lecturers_attendance`
+  ADD PRIMARY KEY (`lecturer_attendance_id`),
+  ADD UNIQUE KEY `uq_lecturer_class_date` (`lecturer_id`,`class_id`,`attendance_date`),
+  ADD KEY `lecturers_attendance_ibfk_2` (`class_id`);
 
 --
 -- Chỉ mục cho bảng `notifications`
@@ -386,6 +328,24 @@ ALTER TABLE `students`
   ADD PRIMARY KEY (`student_id`);
 
 --
+-- Chỉ mục cho bảng `submissions`
+--
+ALTER TABLE `submissions`
+  ADD PRIMARY KEY (`submission_id`),
+  ADD UNIQUE KEY `uq_student_task` (`task_id`,`student_id`),
+  ADD KEY `student_id` (`student_id`),
+  ADD KEY `submitted_file_id` (`submitted_file_id`),
+  ADD KEY `graded_file_id` (`graded_file_id`);
+
+--
+-- Chỉ mục cho bảng `tasks`
+--
+ALTER TABLE `tasks`
+  ADD PRIMARY KEY (`task_id`),
+  ADD KEY `class_id` (`class_id`),
+  ADD KEY `attached_file_id` (`attached_file_id`);
+
+--
 -- Chỉ mục cho bảng `tickets`
 --
 ALTER TABLE `tickets`
@@ -409,37 +369,49 @@ ALTER TABLE `users`
 -- AUTO_INCREMENT cho bảng `attendance`
 --
 ALTER TABLE `attendance`
-  MODIFY `attendance_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=11;
+  MODIFY `attendance_id` int(11) NOT NULL AUTO_INCREMENT;
 
 --
 -- AUTO_INCREMENT cho bảng `classes`
 --
 ALTER TABLE `classes`
-  MODIFY `class_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=10;
+  MODIFY `class_id` int(11) NOT NULL AUTO_INCREMENT;
 
 --
 -- AUTO_INCREMENT cho bảng `class_assignments`
 --
 ALTER TABLE `class_assignments`
-  MODIFY `assignment_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=5;
+  MODIFY `assignment_id` int(11) NOT NULL AUTO_INCREMENT;
+
+--
+-- AUTO_INCREMENT cho bảng `files`
+--
+ALTER TABLE `files`
+  MODIFY `file_id` int(11) NOT NULL AUTO_INCREMENT;
 
 --
 -- AUTO_INCREMENT cho bảng `grades`
 --
 ALTER TABLE `grades`
-  MODIFY `grade_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=9;
+  MODIFY `grade_id` int(11) NOT NULL AUTO_INCREMENT;
 
 --
 -- AUTO_INCREMENT cho bảng `lecturers`
 --
 ALTER TABLE `lecturers`
-  MODIFY `lecturer_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=5;
+  MODIFY `lecturer_id` int(11) NOT NULL AUTO_INCREMENT;
+
+--
+-- AUTO_INCREMENT cho bảng `lecturers_attendance`
+--
+ALTER TABLE `lecturers_attendance`
+  MODIFY `lecturer_attendance_id` int(11) NOT NULL AUTO_INCREMENT;
 
 --
 -- AUTO_INCREMENT cho bảng `notifications`
 --
 ALTER TABLE `notifications`
-  MODIFY `notification_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=5;
+  MODIFY `notification_id` int(11) NOT NULL AUTO_INCREMENT;
 
 --
 -- AUTO_INCREMENT cho bảng `reports`
@@ -451,25 +423,37 @@ ALTER TABLE `reports`
 -- AUTO_INCREMENT cho bảng `roles`
 --
 ALTER TABLE `roles`
-  MODIFY `role_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=6;
+  MODIFY `role_id` int(11) NOT NULL AUTO_INCREMENT;
 
 --
 -- AUTO_INCREMENT cho bảng `students`
 --
 ALTER TABLE `students`
-  MODIFY `student_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=3;
+  MODIFY `student_id` int(11) NOT NULL AUTO_INCREMENT;
+
+--
+-- AUTO_INCREMENT cho bảng `submissions`
+--
+ALTER TABLE `submissions`
+  MODIFY `submission_id` int(11) NOT NULL AUTO_INCREMENT;
+
+--
+-- AUTO_INCREMENT cho bảng `tasks`
+--
+ALTER TABLE `tasks`
+  MODIFY `task_id` int(11) NOT NULL AUTO_INCREMENT;
 
 --
 -- AUTO_INCREMENT cho bảng `tickets`
 --
 ALTER TABLE `tickets`
-  MODIFY `ticket_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=11;
+  MODIFY `ticket_id` int(11) NOT NULL AUTO_INCREMENT;
 
 --
 -- AUTO_INCREMENT cho bảng `users`
 --
 ALTER TABLE `users`
-  MODIFY `user_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=13;
+  MODIFY `user_id` int(11) NOT NULL AUTO_INCREMENT;
 
 --
 -- Các ràng buộc cho các bảng đã đổ
@@ -496,6 +480,12 @@ ALTER TABLE `class_assignments`
   ADD CONSTRAINT `class_assignments_ibfk_2` FOREIGN KEY (`student_id`) REFERENCES `students` (`student_id`) ON DELETE CASCADE ON UPDATE CASCADE;
 
 --
+-- Các ràng buộc cho bảng `files`
+--
+ALTER TABLE `files`
+  ADD CONSTRAINT `files_ibfk_1` FOREIGN KEY (`uploader_user_id`) REFERENCES `users` (`user_id`);
+
+--
 -- Các ràng buộc cho bảng `grades`
 --
 ALTER TABLE `grades`
@@ -508,6 +498,13 @@ ALTER TABLE `lecturers`
   ADD CONSTRAINT `lecturers_ibfk_1` FOREIGN KEY (`user_id`) REFERENCES `users` (`user_id`) ON DELETE CASCADE ON UPDATE CASCADE;
 
 --
+-- Các ràng buộc cho bảng `lecturers_attendance`
+--
+ALTER TABLE `lecturers_attendance`
+  ADD CONSTRAINT `lecturers_attendance_ibfk_1` FOREIGN KEY (`lecturer_id`) REFERENCES `lecturers` (`lecturer_id`) ON DELETE CASCADE ON UPDATE CASCADE,
+  ADD CONSTRAINT `lecturers_attendance_ibfk_2` FOREIGN KEY (`class_id`) REFERENCES `classes` (`class_id`) ON DELETE CASCADE ON UPDATE CASCADE;
+
+--
 -- Các ràng buộc cho bảng `notifications`
 --
 ALTER TABLE `notifications`
@@ -518,6 +515,22 @@ ALTER TABLE `notifications`
 --
 ALTER TABLE `reports`
   ADD CONSTRAINT `reports_ibfk_1` FOREIGN KEY (`generated_by`) REFERENCES `users` (`user_id`) ON DELETE CASCADE ON UPDATE CASCADE;
+
+--
+-- Các ràng buộc cho bảng `submissions`
+--
+ALTER TABLE `submissions`
+  ADD CONSTRAINT `submissions_ibfk_1` FOREIGN KEY (`task_id`) REFERENCES `tasks` (`task_id`) ON DELETE CASCADE,
+  ADD CONSTRAINT `submissions_ibfk_2` FOREIGN KEY (`student_id`) REFERENCES `students` (`student_id`) ON DELETE CASCADE,
+  ADD CONSTRAINT `submissions_ibfk_3` FOREIGN KEY (`submitted_file_id`) REFERENCES `files` (`file_id`),
+  ADD CONSTRAINT `submissions_ibfk_4` FOREIGN KEY (`graded_file_id`) REFERENCES `files` (`file_id`) ON DELETE SET NULL;
+
+--
+-- Các ràng buộc cho bảng `tasks`
+--
+ALTER TABLE `tasks`
+  ADD CONSTRAINT `tasks_ibfk_1` FOREIGN KEY (`class_id`) REFERENCES `classes` (`class_id`) ON DELETE CASCADE,
+  ADD CONSTRAINT `tasks_ibfk_2` FOREIGN KEY (`attached_file_id`) REFERENCES `files` (`file_id`) ON DELETE SET NULL;
 
 --
 -- Các ràng buộc cho bảng `tickets`

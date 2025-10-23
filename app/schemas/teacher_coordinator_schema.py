@@ -5,7 +5,7 @@ from datetime import datetime
 class ClassInfo(BaseModel):
     class_id: int
     class_name: str
-    schedule: str
+    schedule: datetime
     lecturer_name:str
     status: str
 

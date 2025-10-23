@@ -1,8 +1,22 @@
 from sqlalchemy import Column, Integer, String, DateTime, Enum as SQLAEnum, ForeignKey
 from sqlalchemy.orm import relationship
 from datetime import datetime
-from app.db.database import Base
+from app.db.database import Base # Giả sử Base được import từ đây
 import enum
+
+# --- Import các model có liên quan ---
+# (Bạn cần đảm bảo các file này được import đúng)
+#
+# from .role import Role 
+# from .lecturer import Lecturer
+# from .class_model import Class  # Tên file có thể khác
+# from .ticket import Ticket
+# from .report import Report
+# from .notification import Notification
+#
+# === IMPORT MỚI CẦN THIẾT ===
+from .files import File  # (Tên file chứa model 'File')
+
 
 class UserStatus(enum.Enum):
     active = "active"
@@ -19,6 +33,7 @@ class User(Base):
     status = Column(SQLAEnum(UserStatus, native_enum=False), default=UserStatus.active, nullable=False)
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
 
+    # --- Relationships Sẵn Có ---
     role = relationship("Role", back_populates="users")
     lecturer = relationship("Lecturer", back_populates="user", uselist=False)
     created_classes = relationship("Class", back_populates="creator", foreign_keys="[Class.created_by]")
@@ -26,3 +41,5 @@ class User(Base):
     assigned_tickets = relationship("Ticket", back_populates="assignee", foreign_keys="[Ticket.assigned_to]")
     reports = relationship("Report", back_populates="manager")
     notifications = relationship("Notification", back_populates="user")
+    student = relationship("Student", back_populates="user", uselist=False)
+    uploaded_files = relationship("File", back_populates="uploader")

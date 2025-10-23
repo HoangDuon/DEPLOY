@@ -13,5 +13,5 @@ class ClassAssignment(Base):
 
     class_ = relationship("Class", back_populates="assignments")
     student = relationship("Student", back_populates="assignments")
-    attendance = relationship("Attendance", back_populates="assignment", uselist=False)
-    grade = relationship("Grade", back_populates="assignment", uselist=False)
+    attendance = relationship("Attendance", back_populates="assignment")
+    grade = relationship("Grade", back_populates="assignment")

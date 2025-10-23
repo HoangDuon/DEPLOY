@@ -2,6 +2,7 @@ from sqlalchemy import Column, Integer, String, Enum, ForeignKey, DateTime
 from sqlalchemy.orm import relationship
 from datetime import datetime
 from app.db.database import Base
+from app.models.files import Task  # Đảm bảo import đúng model Task
 import enum
 
 class ClassStatus(enum.Enum):
@@ -20,8 +21,9 @@ class Class(Base):
     status = Column(Enum(ClassStatus), default=ClassStatus.active, nullable=False)
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
     place = Column(String(255), nullable=False)
-
+    # class_ = relationship("Class")
     lecturer = relationship("Lecturer", back_populates="classes")
     creator = relationship("User", back_populates="created_classes")
     assignments = relationship("ClassAssignment", back_populates="class_")
     lecturer_attendances = relationship("LecturersAttendance", back_populates="class_")
+    tasks = relationship("Task", back_populates="class_obj")
