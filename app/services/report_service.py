@@ -1,8 +1,7 @@
-# service overview và report cho manager
-
 from typing import Optional, List, Dict
 from datetime import datetime, timedelta
-from app.db.database import SessionLocal
+from sqlalchemy.orm import Session  # <<< THÊM VÀO
+# from app.db.database import SessionLocal # <<< XÓA ĐI
 from app.models.report import Report
 from app.models.student import Student
 from app.models.user import User
@@ -11,8 +10,9 @@ from app.models.attendance import Attendance, AttendanceStatus
 from app.models.ticket import Ticket, TicketStatus
 
 
-def get_reports(manager_id: Optional[int] = None) -> List[Dict]:
-    db = SessionLocal()
+# <<< THÊM (db: Session)
+def get_reports(db: Session, manager_id: Optional[int] = None) -> List[Dict]:
+    # db = SessionLocal() # <<< XÓA
     try:
         q = db.query(Report)
         if manager_id:
@@ -29,20 +29,15 @@ def get_reports(manager_id: Optional[int] = None) -> List[Dict]:
             })
         return result
     finally:
-        db.close()
+        pass # db.close() # <<< XÓA (Router sẽ quản lý)
 
 
-def generate_overview(manager_id: Optional[int] = None, days: int = 30) -> Dict:
+# <<< THÊM (db: Session)
+def generate_overview(db: Session, manager_id: Optional[int] = None, days: int = 30) -> Dict:
     """Generate an overview report for managers.
-
-    Metrics returned:
-      - new_students: number of students whose user.created_at is within `days`
-      - new_classes: number of classes created within `days`
-      - attendance_rate: percent present over total attendance within `days`
-      - resolved_tickets: count of tickets resolved within `days`
-      - total_reports: count of generated reports (optionally by manager)
+    ... (docstring) ...
     """
-    db = SessionLocal()
+    # db = SessionLocal() # <<< XÓA
     try:
         since = datetime.utcnow() - timedelta(days=days)
 
@@ -53,7 +48,7 @@ def generate_overview(manager_id: Optional[int] = None, days: int = 30) -> Dict:
             .filter(User.created_at >= since)
             .count()
         )
-
+    
         new_classes = (
             db.query(Class)
             .filter(Class.created_at >= since)
@@ -95,4 +90,4 @@ def generate_overview(manager_id: Optional[int] = None, days: int = 30) -> Dict:
             "since": since,
         }
     finally:
-        db.close()
+        pass # db.close() # <<< XÓA

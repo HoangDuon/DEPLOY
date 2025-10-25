@@ -1,14 +1,17 @@
 from fastapi import HTTPException
+from sqlalchemy.orm import Session  # <<< THÊM VÀO
 from app.models.notification import Notification
-from app.db.database import SessionLocal
+# from app.db.database import SessionLocal # <<< XÓA ĐI
 
-def get_all_notifications():
-    db = SessionLocal()
+# <<< THÊM (db: Session)
+def get_all_notifications(db: Session):
+    # db = SessionLocal() # <<< XÓA
 
     notifications = db.query(Notification).order_by(Notification.created_at.desc()).all()
 
+    # Trả về mảng rỗng thay vì 404 thì tốt hơn cho API
     if not notifications:
-        raise HTTPException(status_code=404, detail="No notifications found")
+        return []
 
     list_of_notifications = []
 

@@ -1,6 +1,6 @@
 from typing import List, Optional
 from pydantic import BaseModel, Field
-from app.schemas.notification_schema import NotificationRespone
+from app.schemas.notification_schema import NotificationResponse
 
 class LoginRequest(BaseModel):
     username: str = Field(..., example="manager")

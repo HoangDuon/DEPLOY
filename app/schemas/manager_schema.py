@@ -1,5 +1,6 @@
 from pydantic import BaseModel
 from typing import Optional
+from typing import List, Optional
 
 class CreateUserRequest(BaseModel):
     name: str
@@ -14,3 +15,7 @@ class UpdateUserRequest(BaseModel):
     password: Optional[str] = None
     role_id: Optional[int] = None
     status: Optional[str] = None
+
+class ApproveTicketRequest(BaseModel):
+    ticket_ids: List[int]
+    activate_student: bool = True

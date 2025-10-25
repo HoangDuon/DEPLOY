@@ -1,6 +1,9 @@
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Depends  # <<< THÊM VÀO
+from sqlalchemy.orm import Session  # <<< THÊM VÀO
+from app.db.database import get_db  # <<< THÊM VÀO
+
 from app.schemas.user_schema import LoginRequest, TokenResponse, UserInfo, TicketCreateRequest
-from app.schemas.notification_schema import NotificationRespone
+from app.schemas.notification_schema import NotificationResponse
 from app.services.user_service import authenticate_user, create_access_token
 from app.services.notification_service import get_all_notifications
 from app.services.user_service import get_info_from_user_id
@@ -10,10 +13,13 @@ router = APIRouter()
 
 # User Login
 @router.post("/login", response_model=TokenResponse)
-def login(data: LoginRequest) -> TokenResponse:
-    user_data = authenticate_user(data.username, data.password)
+# <<< THÊM (db: Session = Depends(get_db))
+def login(data: LoginRequest, db: Session = Depends(get_db)) -> TokenResponse:
+    # <<< TRUYỀN `db`
+    user_data = authenticate_user(db, data.username, data.password)
+    
     if user_data:
-        print(f"user.password_hash in DB: {user_data["password_hash"]}")
+        print(f"user.password_hash in DB: {user_data['password_hash']}")
     if not user_data:
         raise HTTPException(status_code=401, detail="Invalid User or Password")
     
@@ -33,8 +39,10 @@ def login(data: LoginRequest) -> TokenResponse:
 
 # Get User Info by user_id
 @router.get("/user/{user_id}", response_model=UserInfo)
-def get_user_info(user_id: int) -> UserInfo:
-    user = get_info_from_user_id(user_id)
+# <<< THÊM (db: Session = Depends(get_db))
+def get_user_info(user_id: int, db: Session = Depends(get_db)) -> UserInfo:
+    # <<< TRUYỀN `db`
+    user = get_info_from_user_id(db, user_id)
 
     username = user.name
     email = user.email
@@ -42,18 +50,33 @@ def get_user_info(user_id: int) -> UserInfo:
     return {
         "username": username,
         "email": email
-    }   
+    } 
 
 @router.post("/ticket/submit")
-def submit_ticket_endpoint(data: TicketCreateRequest):
+# <<< THÊM (db: Session = Depends(get_db))
+def submit_ticket_endpoint(data: TicketCreateRequest, db: Session = Depends(get_db)):
 
-    ticket = submit_ticket(data.user_id, data.user_assigned, data.title, data.issue_type, data.description, data.status)
+    # <<< TRUYỀN `db`
+    ticket = submit_ticket(
+        db, 
+        data.user_id, 
+        data.user_assigned, 
+        data.title, 
+        data.issue_type, 
+        data.description, 
+        data.status
+    )
 
     return {"message": "Ticket submitted successfully", "ticket_id": ticket.ticket_id}
 
 
 @router.put("/admin/user/update-password", response_model=UserInfo)
-def admin_update_user_password(user_id: int, new_password: str):
+# <<< THÊM (db: Session = Depends(get_db))
+def admin_update_user_password(
+    user_id: int, 
+    new_password: str, 
+    db: Session = Depends(get_db)
+):
     """
     Endpoint cho phép Admin reset mật khẩu cho bất kỳ người dùng nào.
     Yêu cầu: user_id và mật khẩu mới (gửi dưới dạng Query Parameters).
@@ -61,13 +84,12 @@ def admin_update_user_password(user_id: int, new_password: str):
     """
     
     # !!! CẢNH BÁO BẢO MẬT !!!
-    # Route này RẤT nguy hiểm. Bạn PHẢI bảo vệ nó bằng cách
-    # yêu cầu token (JWT) và kiểm tra xem vai trò (role)
-    # của người gọi có phải là "Admin" hay không.
-    # (Hiện tại, bất kỳ ai cũng có thể gọi nó)
+    # (Giữ nguyên cảnh báo của bạn)
     
     try:
+        # <<< TRUYỀN `db`
         user = update_password(
+            db,  
             user_id=user_id, 
             new_password=new_password
         )

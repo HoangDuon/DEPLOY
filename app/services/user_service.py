@@ -2,13 +2,16 @@ import hashlib
 from fastapi import HTTPException
 from app.models.ticket import Ticket
 from app.models.user import User
-from app.db.database import SessionLocal
+from sqlalchemy.orm import Session  # <<< THÊM VÀO
+# from app.db.database import SessionLocal # <<< XÓA ĐI
 from app.core.config import settings
 from jose import jwt
 from datetime import datetime, timedelta, timezone
 from passlib.context import CryptContext
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+
+# --- CÁC HÀM KHÔNG TRUY CẬP DB (GIỮ NGUYÊN) ---
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:
     sha256_pw = hashlib.sha256(plain_password.encode("utf-8")).hexdigest()
@@ -18,9 +21,26 @@ def hash_password(plain_password: str) -> str:
     sha256_pw = hashlib.sha256(plain_password.encode("utf-8")).hexdigest()
     return pwd_context.hash(sha256_pw)
 
-def authenticate_user(username: str, password: str):
+def create_access_token(data: dict, expires_delta: timedelta | None = None) -> str:
+    to_encode = data.copy()
+    expire = datetime.now(timezone.utc) + (
+        expires_delta or timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
+    )
+    to_encode.update({"exp": expire})
+
+    encoded_jwt = jwt.encode(
+        to_encode,
+        settings.JWT_SECRET_KEY,
+        algorithm=settings.JWT_ALGORITHM
+    )
+    return encoded_jwt
+
+# --- CÁC HÀM TRUY CẬP DB (ĐÃ SỬA) ---
+
+# <<< THÊM (db: Session)
+def authenticate_user(db: Session, username: str, password: str):
     try:
-        db = SessionLocal()
+        # db = SessionLocal() # <<< XÓA
         user = db.query(User).filter(User.name == username).first()
 
         if not user:
@@ -36,37 +56,26 @@ def authenticate_user(username: str, password: str):
             "role": user.role.role_name if user.role else None
         }
     finally:
-        db.close()
+        pass # db.close() # <<< XÓA
 
-def create_access_token(data: dict, expires_delta: timedelta | None = None) -> str:
-    to_encode = data.copy()
-    expire = datetime.now(timezone.utc) + (
-        expires_delta or timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
-    )
-    to_encode.update({"exp": expire})
-
-    encoded_jwt = jwt.encode(
-        to_encode,
-        settings.JWT_SECRET_KEY,
-        algorithm=settings.JWT_ALGORITHM
-    )
-    return encoded_jwt
-def get_info_from_user_id(user_id: int):
-    db = SessionLocal()
+# <<< THÊM (db: Session)
+def get_info_from_user_id(db: Session, user_id: int):
+    # db = SessionLocal() # <<< XÓA
 
     user = db.query(User).filter(User.user_id == user_id).first()
 
     if not user:
-        raise HTTPException(status_code=404, detail="User not found")
+        raise HTTPException(status_code=4404, detail="User not found")
     
     return user
 
-def submit_ticket(user_id: int, user_assigned: int, title: str, issue_type: str, description: str, status: str = "open", created_at: datetime = None):
+# <<< THÊM (db: Session)
+def submit_ticket(db: Session, user_id: int, user_assigned: int, title: str, issue_type: str, description: str, status: str = "open", created_at: datetime = None):
     try:
         if created_at is None:
             created_at = datetime.now()
 
-        db = SessionLocal()
+        # db = SessionLocal() # <<< XÓA
         new_ticket = Ticket(
             submitted_by=user_id,
             assigned_to=user_assigned,
@@ -82,15 +91,16 @@ def submit_ticket(user_id: int, user_assigned: int, title: str, issue_type: str,
 
         return new_ticket
     finally:
-        db.close()
+        pass # db.close() # <<< XÓA
 
-def update_password(user_id: int, new_password: str):
+# <<< THÊM (db: Session)
+def update_password(db: Session, user_id: int, new_password: str):
     """
     Finds a user by user_id, hashes their new password,
     and updates it in the database.
     """
     try:
-        db = SessionLocal()
+        # db = SessionLocal() # <<< XÓA
 
         # 1. Find the user
         user = db.query(User).filter(User.user_id == user_id).first()
@@ -113,4 +123,4 @@ def update_password(user_id: int, new_password: str):
         db.rollback() # Rollback on error
         raise HTTPException(status_code=500, detail=f"Error updating password: {e}")
     finally:
-        db.close()
+        pass # db.close() # <<< XÓA

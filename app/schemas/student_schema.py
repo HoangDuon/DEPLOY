@@ -6,6 +6,7 @@ class ClassInfo(BaseModel):
     class_id: int
     class_name: str
     lecturer_name: str
+    place: str
     schedule: datetime
 
     class Config:

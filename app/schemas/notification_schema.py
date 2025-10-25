@@ -1,7 +1,7 @@
 from pydantic import BaseModel
 from datetime import datetime
 
-class NotificationRespone(BaseModel):
+class NotificationResponse(BaseModel):
     notification_id: int
     title: str
     message: str
