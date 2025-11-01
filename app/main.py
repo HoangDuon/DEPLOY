@@ -14,7 +14,7 @@ database.Base.metadata.create_all(bind=database.engine)
 app = FastAPI(title=settings.PROJECT_NAME)
 
 origins = [
-    "https://deploy-fhtg.onrender.com"
+    "https://deploy-frontend-delta.vercel.app"
     "http://127.0.0.1:5500",
     "http://localhost:5500"
 ]
