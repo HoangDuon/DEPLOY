@@ -1,0 +1,593 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CS Dashboard - LMS</title>
+    <link rel="stylesheet" href="/app/static/css/dashboard.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    
+    <style>
+        /* Định hình chung cho các select, input, textarea trong form-box và form-grid */
+        .form-control, 
+        .form-box select, 
+        .form-box input[type="text"], 
+        .form-box textarea,
+        /* Áp dụng cho khu vực Ghi nhận Phản hồi (Filter) */
+        #record-feedback select,
+        #record-feedback input[type="text"],
+        /* ÁP DỤNG CHO KHU VỰC TẠO TICKET */
+        #ticket-management select,
+        #ticket-management input[type="text"],
+        #ticket-management textarea {
+            /* Định hình container */
+            padding: 8px 12px;
+            height: 40px; 
+            border: 1px solid #d1d5db; /* gray-300 */
+            border-radius: 6px; 
+            box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05); /* shadow-sm nhẹ */
+            width: 100%; 
+            box-sizing: border-box; 
+            
+            /* Typography */
+            background-color: #ffffff;
+            color: #1f2937; /* gray-800 */
+            font-size: 14px;
+            transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
+        }
+
+        /* Định hình cho textarea */
+        .form-box textarea.form-control {
+            height: auto;
+            min-height: 100px; 
+            resize: vertical; /* Cho phép kéo dãn theo chiều dọc */
+        }
+
+        /* Hiệu ứng Focus */
+        .form-control:focus, 
+        .form-box select:focus, 
+        .form-box input:focus,
+        .form-box textarea:focus,
+        /* ÁP DỤNG CHO KHU VỰC TẠO TICKET */
+        #ticket-management select:focus,
+        #ticket-management input:focus,
+        #ticket-management textarea:focus {
+            border-color: #4A6CF7; /* Blue chủ đạo */
+            box-shadow: 0 0 0 2px rgba(74, 108, 247, 0.3);
+            outline: none;
+        }
+
+        /* Tạo style đẹp cho select (thêm mũi tên tùy chỉnh) */
+        .form-box select, #record-feedback select,
+        /* ÁP DỤNG CHO KHU VỰC TẠO TICKET */
+        #ticket-management select {
+            appearance: none;
+            -webkit-appearance: none;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20' fill='none'%3E%3Cpath d='M7 10l5 5 5-5H7z' fill='%236B7280'/%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-position: right 10px center;
+            background-size: 14px;
+            padding-right: 30px; 
+            cursor: pointer;
+        }
+        
+        /* Cấu trúc grid cho form tạo ticket và filter */
+        .form-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 20px;
+        }
+        
+        /* Căn chỉnh các nút tab trong khu vực Quản lý Học viên */
+        #student-management .button-group {
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
+.body-scroll-lock {
+    overflow: hidden !important;
+}
+/* ===================================== */
+/* CSS TÙY CHỈNH CHO BẢNG TICKET VÀ PHẢN HỒI */
+/* ===================================== */
+
+#ticket-list-table th,
+#feedback-history-table th {
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: #4b5563; /* gray-600 */
+    text-transform: uppercase;
+    padding: 12px 15px;
+    border-bottom: 2px solid #e5e7eb; /* gray-200 */
+}
+
+#ticket-list-table td,
+#feedback-history-table td {
+    padding: 10px 15px; /* Giảm padding */
+    font-size: 0.9rem; /* Font chữ nhỏ hơn */
+    color: #374151; /* gray-700 */
+    border-bottom: none; /* Loại bỏ đường viền dưới */
+    vertical-align: middle;
+    font-weight: 400; 
+}
+
+#ticket-list-table tbody tr,
+#feedback-history-table tbody tr {
+    border-bottom: 1px solid #f3f4f6; /* gray-100 nhẹ */
+    transition: background-color 0.15s ease;
+}
+
+#ticket-list-table tbody tr:last-child {
+    border-bottom: none;
+}
+
+#ticket-list-table tbody tr:hover,
+#feedback-history-table tbody tr:hover {
+    background-color: #f9fafb; /* gray-50 khi hover */
+}
+
+#ticket-list-table .status,
+#feedback-history-table .status {
+    display: inline-block;
+    padding: 4px 8px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    border-radius: 9999px;
+}
+
+
+/* ================================================= */
+/* Cập nhật Modal Chi tiết Học viên (FIX RỘNG) */
+/* ================================================= */
+
+.modal-overlay.student-detail-modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.6);
+    display: none; 
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+}
+
+.modal-overlay.student-detail-modal.active {
+    display: flex;
+}
+
+/* 🎯 ĐIỀU CHỈNH KÍCH THƯỚC VÀ CĂN GIỮA MODAL */
+.modal-content.student-detail-content {
+    background: #fff;
+    padding: 30px;
+    border-radius: 8px;
+    /* Tăng chiều rộng lên */
+    width: 80%;
+    max-width: 900px; /* Giới hạn tối đa */
+    
+    /* Thiết lập chiều cao tối đa */
+    max-height: 90vh; /* Tăng chiều cao tối đa */
+    overflow-y: auto; /* Cho phép cuộn nếu nội dung quá dài */
+    
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    position: relative;
+    
+    /* Cấu trúc flex để nội dung bên trong tự điều chỉnh */
+    display: flex;
+    flex-direction: column;
+}
+
+.modal-body {
+    padding: 15px 0 0 0; /* Giảm padding trên dưới để tối ưu diện tích */
+    flex-grow: 1;
+}
+
+.modal-header {
+    border-bottom: 1px solid #eee;
+    padding-bottom: 15px;
+    margin-bottom: 15px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+/* 🎯 CẤU TRÚC GRID CHO THÔNG TIN CƠ BẢN VÀ LỚP HỌC */
+.modal-header-info {
+    display: grid;
+    /* Chia làm 2 cột: 1 cột cho info cơ bản, 1 cột cho danh sách lớp */
+    grid-template-columns: 1fr 1.5fr; 
+    gap: 20px;
+    margin-bottom: 25px;
+}
+
+@media (max-width: 768px) {
+    .modal-header-info {
+        /* Chuyển sang 1 cột trên màn hình nhỏ */
+        grid-template-columns: 1fr;
+    }
+}
+
+
+.detail-section {
+    margin-bottom: 25px;
+    padding: 15px;
+    border-radius: 4px;
+    background-color: #f8fafc;
+}
+
+.detail-section h4 {
+    color: #0f766e;
+    border-bottom: 2px solid #e0f2f1;
+    padding-bottom: 5px;
+    margin-bottom: 10px;
+}
+
+.detail-list p {
+    margin: 3px 0;
+    font-size: 0.95rem;
+}
+
+/* ===================================== */
+/* CSS cho Chart mô phỏng */
+/* ===================================== */
+
+.performance-chart-container {
+    padding-top: 15px;
+}
+
+.chart-bar-item {
+    display: flex;
+    align-items: center;
+    margin-bottom: 8px;
+    font-size: 0.85rem;
+}
+
+.chart-bar-label {
+    width: 120px;
+    font-weight: 600;
+    color: #333;
+}
+
+.chart-bar-wrapper {
+    flex-grow: 1;
+    height: 20px;
+    background-color: #eee;
+    border-radius: 4px;
+    overflow: hidden;
+    position: relative;
+}
+
+.chart-bar {
+    height: 100%;
+    background-color: #1e40af; 
+    transition: width 0.5s ease-out;
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    padding-right: 5px;
+}
+
+.chart-bar-value {
+    color: white;
+    font-weight: bold;
+    font-size: 0.75rem;
+    text-shadow: 1px 1px 1px rgba(0, 0, 0, 0.4);
+}
+</style>
+</head>
+<body>
+    <div class="dashboard-container">
+        <div id="sidebar-placeholder"></div>
+        <main class="main-content">
+            <div id="header-placeholder"></div>
+            <div class="content-area">
+                <section id="dashboard" class="content-section active">
+                    <h2>Tổng quan CS</h2>
+                    <div class="card-container" style="margin-bottom: 30px;">
+                        <div class="card">
+                            <i class="fa-solid fa-users"></i>
+                            <h3 id="total-students">0</h3>
+                            <p>Tổng số học viên</p>
+                        </div>
+                        <!-- <div class="card">
+                            <i class="fa-solid fa-comment-exclamation"></i>
+                            <h3 id="pending-feedback">0</h3>
+                            <p>Phản hồi cần xử lý</p>
+                        </div> -->
+                        <div class="card">
+                            <!-- <i class="fa-solid fa-ticket-simple"></i> -->
+                             <i class="fa-solid fa-graduation-cap"></i>
+                            <h3 id="new-tickets">0</h3>
+                            <p>Điểm trung bình HV</p>
+                        </div>
+                        <div class="card">
+                            <i class="fa-solid fa-chart-line"></i>
+                            <h3 id="avg-attendance">0%</h3>
+                            <p>Tỉ lệ điểm danh TB</p>
+                        </div>
+                    </div>
+                    
+                    <div id="announcements-view" class="content-only-section active" style="margin-top: 20px;">
+                        <h3 style="margin-bottom: 20px;"><i class="fas fa-bullhorn"></i> Thông báo mới nhất từ Ban Quản lý</h3>
+                        <div id="announcements-list">
+                            </div>
+                    </div>
+                </section>
+                
+                <section id="student-management" class="content-section">
+                    <h2>Quản lý học viên</h2>
+
+                    <div class="button-group" style="margin-bottom: 20px;">
+                        <button class="btn btn-primary" data-target-tab="update-student"><i class="fa-solid fa-user-pen"></i> Cập nhật học viên</button>
+                        <button id="add-student-btn" class="btn btn-primary" data-target-tab="update-student"><i class="fa-solid fa-user-plus"></i> Tạo tài khoản học viên</button>
+                    </div>
+
+                    <div id="update-student" class="student-tab-content active">
+                        <div class="table-container">
+                            <h3>Danh sách học viên</h3>
+                            <table id="student-list-table">
+                                <thead>
+                                    <tr>
+                                        <th>Mã HV</th>
+                                        <th>Họ tên</th>
+                                        <th>Lớp</th>
+                                        <th>Điểm danh</th>
+                                        <th>Điểm trung bình</th>
+                                        <th>Hành động</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <div id="monitor-attendance" class="student-tab-content hidden">
+                        <div class="table-container">
+                            <h3>Bảng theo dõi Điểm danh mẫu</h3>
+                            <table id="attendance-table">
+                                <thead>
+                                    <tr>
+                                        <th>Mã HV</th>
+                                        <th>Họ tên</th>
+                                        <th>Lớp</th>
+                                        <th>Tổng buổi</th>
+                                        <th>Buổi vắng</th>
+                                        <th>Tỷ lệ (%)</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <div id="monitor-performance" class="student-tab-content hidden">
+                        <div class="table-container">
+                            <h3>Bảng theo dõi Kết quả học tập mẫu</h3>
+                            <table id="performance-table">
+                                <thead>
+                                    <tr>
+                                        <th>Mã HV</th>
+                                        <th>Họ tên</th>
+                                        <th>Môn học</th>
+                                        <th>Điểm KT1</th>
+                                        <th>Điểm KT2</th>
+                                        <th>Điểm TB</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </section>
+
+                <section id="record-feedback" class="content-section">
+                    <h2>Ghi nhận & Quản lý Phản hồi</h2>
+                    
+                    <div class="card" style="margin-bottom: 20px; padding: 20px;">
+                        <h3>Lịch sử Phản hồi đã ghi nhận</h3>
+                        <div class="form-grid" style="grid-template-columns: 3fr 1fr; gap: 20px; margin-top: 15px;">
+                            <div class="form-group">
+                                <label for="feedback-search">Tìm kiếm (Tên HV/Lớp):</label>
+                                <input type="text" id="feedback-search" class="form-control" placeholder="Tìm kiếm theo Mã hoặc tên...">
+                            </div>
+
+                            <div class="form-group">
+                                <label for="feedback-sort-date">Sắp xếp theo Ngày:</label>
+                                <select id="feedback-sort-date" class="form-control">
+                                    <option value="newest">Mới nhất</option>
+                                    <option value="oldest">Cũ nhất</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="table-container">
+                        <table id="feedback-history-table">
+                            <thead>
+                                <tr>
+                                    <th>Họ tên HV</th>
+                                    <th>Tiêu đềx    </th>
+                                    <th>Loại</th>
+                                    <th>Nội dung (Tóm tắt)</th>
+                                    <th>Trạng thái</th>
+                                    <th>Ngày ghi nhận</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                </tbody>
+                        </table>
+                    </div>
+                </section>
+                
+                <section id="ticket-management" class="content-section">
+                    <h2>Ticket của tôi</h2>
+                    
+                    <h3>Tạo Ticket Mới <i class="fa-solid fa-paper-plane"></i>
+                    <div class="form-box card">
+                        <div class="form-group">
+                            <label for="ticket-title">Tiêu đề Ticket:</label>
+                            <input type="text" id="ticket-title" class="form-control" placeholder="Nhập tiêu đề tóm tắt...">
+                        </div>
+
+                        <div class="form-group">
+                            <label for="ticket-description">Nội dung chi tiết:</label>
+                            <textarea id="ticket-description" rows="4" class="form-control" placeholder="Mô tả chi tiết vấn đề..."></textarea>
+                        </div>
+
+                        <button id="submit-ticket-btn" class="btn btn-primary"> Gửi Ticket</button>
+                    </div>
+
+                    <div class="table-container" style="margin-top: 30px;">
+                        <h3>Danh sách Ticket đang chờ xử lý</h3>
+                        <table id="ticket-list-table">
+                            <thead>
+                                <tr>
+                                    <th>Tiêu đề</th>
+                                    <th>Nội dung</th>
+                                    <th>Trạng thái</th>
+                                    <th>Ngày tạo</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                </tbody>
+                        </table>
+                    </div>
+                </section>
+                
+            </div>
+        </main>
+    </div>
+
+    <div id="profile-modal-overlay" class="modal-overlay hidden">
+        <div class="modal" style="max-width: 500px;">
+            <div class="modal-header">
+                <h3 id="profile-modal-title">Thông tin Tài khoản</h3>
+                <span id="close-profile-modal-btn" class="close-modal">&times;</span>
+            </div>
+            <div class="modal-body">
+                
+                <div id="profile-info-display">
+                    <p><strong>Tên đăng nhập:</strong> <span id="profile-username"></span></p>
+                    <p><strong>Email:</strong> <span id="profile-email"></span></p>
+                </div>
+                
+                <div id="profile-edit-form" class="hidden">
+                    <div class="form-group">
+                        <label for="edit-username">Tên đăng nhập mới:</label>
+                        <input type="text" id="edit-username" class="form-control" disabled> 
+                    </div>
+                    <div class="form-group">
+                        <label for="edit-email">Email:</label>
+                        <input type="email" id="edit-email" class="form-control" disabled readonly>
+                    </div>
+                    
+                    <hr style="margin: 20px 0;">
+                    
+                    <div class="form-group">
+                        <label for="new-password">Mật khẩu mới:</label>
+                        <input type="password" id="new-password" class="form-control" placeholder="Để trống nếu không muốn đổi mật khẩu">
+                    </div>
+                    <div class="form-group">
+                        <label for="current-password">Mật khẩu hiện tại (BẮT BUỘC để lưu thay đổi):</label>
+                        <input type="password" id="current-password" class="form-control" placeholder="Nhập mật khẩu hiện tại" required>
+                    </div>
+                    <p class="text-danger hidden" id="password-error" style="color: red; font-size: 0.9em;">Mật khẩu không đúng.</p>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button id="cancel-profile-btn" class="btn btn-secondary">Đóng</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="add-student-modal-overlay" class="modal-overlay hidden">
+        <div class="modal" style="max-width: 550px;">
+            <div class="modal-header" style="width: 100%;">
+                <h3 id="add-student-modal-title">Tạo Tài khoản Học viên mới</h3>
+                <span id="close-add-student-modal-btn" class="close-modal">&times;</span>
+            </div>
+            <div class="modal-body" style="padding: 10px 20px;">
+                <form id="add-student-form">
+                    <div class="form-group">
+                        <label for="new-student-fullname">Họ và tên Học viên:</label>
+                        <input type="text" id="new-student-fullname" name="fullName" class="form-control" placeholder="Ví dụ: Nguyễn Văn A" required>
+                    </div>
+
+                    <div class="form-grid" style="grid-template-columns: 1fr 1fr; gap: 20px;">
+                        <div class="form-group">
+                            <label for="new-student-username">Tên đăng nhập (Username):</label>
+                            <input type="text" id="new-student-username" name="username" class="form-control" placeholder="Ví dụ: nvana01" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="new-student-password">Mật khẩu ban đầu:</label>
+                            <input type="password" id="new-student-password" name="password" class="form-control" value="123456" required>
+                            <small style="color: #6c757d;">(Mặc định là 123456)</small>
+                        </div>
+                    </div>
+                
+                    <div class="form-group">
+                        <label for="new-student-email">Email:</label>
+                        <input type="email" id="new-student-email" name="email" class="form-control" placeholder="example@email.com">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="new-student-class-id">Mã Lớp đăng ký (Tùy chọn):</label>
+                        <input type="text" id="new-student-class-id" name="classId" class="form-control" placeholder="Mã lớp (Ví dụ: IT101)">
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button id="cancel-add-student-btn" class="btn btn-secondary">Hủy</button>
+                <button id="save-new-student-btn" type="submit" form="add-student-form" class="btn btn-primary"> Tạo tài khoản</button>
+            </div>
+        </div>
+    </div>
+
+<div class="modal-overlay student-detail-modal" id="student-detail-modal-overlay">
+    <div class="modal-content student-detail-content">
+        <div class="modal-header">
+            <h3 id="detail-student-name">CHI TIẾT HỌC VIÊN</h3>
+            <button class="close-btn" id="close-detail-modal-btn">&times;</button>
+        </div>
+        
+        <div class="modal-body">
+            <div class="modal-header-info">
+                <div class="detail-section" style="margin-bottom: 0;">
+                    <h4><i class="fas fa-info-circle"></i> Thông tin cơ bản</h4>
+                    <div class="detail-list">
+                        <p><strong>Mã HV:</strong> <span id="detail-student-id"></span></p>
+                        <p><strong>Email:</strong> <span id="detail-student-email"></span></p>
+                        <p><strong>Trạng thái:</strong> <span id="detail-student-status"></span></p>
+                    </div>
+                </div>
+
+                <div class="detail-section" style="margin-bottom: 0;">
+                    <h4><i class="fas fa-chalkboard-teacher"></i> Các lớp đang theo học</h4>
+                    <ul id="detail-classes-list" style="padding-left: 20px; margin: 5px 0;">
+                        </ul>
+                </div>
+            </div>
+            <div class="detail-section">
+                <h4><i class="fas fa-signal"></i> Hiệu suất học tập tổng quan</h4>
+                <div class="detail-list" style="margin-bottom: 10px;">
+                    <p><strong>Điểm trung bình tổng:</strong> <span id="detail-avg-score"></span></p>
+                    <p><strong>Số lượng bản ghi điểm:</strong> <span id="detail-records-count"></span></p>
+                </div>
+                
+                <div class="performance-chart-container hidden" id="performance-chart-container">
+                    </div>
+            </div>
+
+            <div id="class-specific-details-container" style="padding: 15px;">
+                </div>
+            </div>
+    </div>
+</div>
+        <script src="/app/static/js/common.js"></script>
+        <script src="/app/static/js/cs.js"></script>
+    </body>
+    </html>

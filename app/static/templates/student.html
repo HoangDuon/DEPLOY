@@ -1,0 +1,357 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Student Dashboard - LMS</title>
+    <link rel="stylesheet" href="/app/static/css/dashboard.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    
+    <!-- CSS TÙY CHỈNH CHO SELECT VÀ INPUT -->
+    <style>
+        /* Định hình chung cho tất cả các select và input.form-control trong phần submit-feedback */
+        #submit-feedback .form-control, 
+        #submit-feedback select,
+        #submit-feedback input[type="text"],
+        #submit-feedback input[type="email"] {
+            /* Định hình container */
+            padding: 8px 12px;
+            height: 40px; 
+            border: 1px solid #d1d5db; /* gray-300 */
+            border-radius: 6px; 
+            box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05); /* shadow-sm nhẹ */
+            width: 100%; /* Đảm bảo chiếm toàn bộ chiều rộng group */
+            
+            /* Typography */
+            background-color: #ffffff;
+            color: #1f2937; /* gray-800 */
+            font-size: 14px;
+            transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
+        }
+
+        /* Định hình cho textarea */
+        #submit-feedback textarea.form-control {
+            height: auto;
+            min-height: 100px; 
+        }
+
+        /* Hiệu ứng Focus */
+        #submit-feedback .form-control:focus, 
+        #submit-feedback select:focus,
+        #submit-feedback input:focus,
+        #submit-feedback textarea:focus {
+            border-color: #4A6CF7; /* Blue chủ đạo */
+            box-shadow: 0 0 0 2px rgba(74, 108, 247, 0.3);
+            outline: none;
+        }
+
+        /* Tạo style đẹp cho select (loại bỏ mũi tên mặc định) */
+        #submit-feedback select {
+            appearance: none;
+            -webkit-appearance: none;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20' fill='none'%3E%3Cpath d='M7 10l5 5 5-5H7z' fill='%236B7280'/%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-position: right 10px center;
+            background-size: 14px;
+            padding-right: 30px; 
+            cursor: pointer;
+        }
+        
+        /* Căn chỉnh các bộ lọc trong history */
+        #submit-feedback .form-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="dashboard-container">
+        <div id="sidebar-placeholder"></div>
+        <main class="main-content">
+            <div id="header-placeholder"></div>
+
+            <div class="content-area">
+                <section id="dashboard" class="content-section active">
+                    <h2>Tổng quan Học viên</h2>
+                    <div class="card-container" style="margin-bottom: 30px;">
+                        <div class="card"><i class="fas fa-book-open"></i><h3 id="total-classes">0</h3><p>Tổng số Lớp đang học</p></div>
+                        <div class="card"><i class="fas fa-medal"></i><h3 id="avg-gpa">0.0</h3><p>Điểm trung bình (GPA)</p></div>
+                        <div class="card"><i class="fas fa-calendar-check"></i><h3 id="absent-count">0</h3><p>Số buổi vắng (Tháng)</p></div>
+                    </div>
+                    
+                    <div class="dashboard-tabs">
+                        <button class="tab-item dashboard-tab active" data-tab="schedule-view"><i class="fas fa-calendar-alt"></i> Thời khoá biểu</button>
+                        <button class="tab-item dashboard-tab" data-tab="announcements-view"><i class="fas fa-bullhorn"></i> Thông báo</button>
+                    </div>
+                
+                    <div id="schedule-view" class="tab-content active">
+                        <div class="schedule-title-bar" style="margin-top: 20px;">
+                            <h2>Thời khoá biểu trong tuần</h2>
+                            <div class="schedule-controls">
+                                <button id="prev-week" class="btn btn-secondary"><i class="fas fa-chevron-left"></i></button>
+                                <span id="week-display" class="current-week-text"></span>
+                                <button id="next-week" class="btn btn-secondary"><i class="fas fa-chevron-right"></i></button>
+                            </div>
+                        </div>
+                        <div class="weekly-schedule">
+<div class="schedule-header">
+    <div class="time-column-header"></div>
+    <div data-day-header="monday">
+        <div class="day-name">Thứ Hai</div>
+        <div class="day-date" data-day-date="monday"></div>
+    </div>
+    <div data-day-header="tuesday">
+        <div class="day-name">Thứ Ba</div>
+        <div class="day-date" data-day-date="tuesday"></div>
+    </div>
+    <div data-day-header="wednesday">
+        <div class="day-name">Thứ Tư</div>
+        <div class="day-date" data-day-date="wednesday"></div>
+    </div>
+    <div data-day-header="thursday">
+        <div class="day-name">Thứ Năm</div>
+        <div class="day-date" data-day-date="thursday"></div>
+    </div>
+    <div data-day-header="friday">
+        <div class="day-name">Thứ Sáu</div>
+        <div class="day-date" data-day-date="friday"></div>
+    </div>
+    <div data-day-header="saturday">
+        <div class="day-name">Thứ Bảy</div>
+        <div class="day-date" data-day-date="saturday"></div>
+    </div>
+    <div data-day-header="sunday">
+        <div class="day-name">Chủ Nhật</div>
+        <div class="day-date" data-day-date="sunday"></div>
+    </div>
+</div>
+
+                           <div class="schedule-body" id="student-schedule-body">
+                               <div class="time-column">
+                                   <span>07:00</span><span>08:00</span><span>09:00</span>
+                                   <span>10:00</span><span>11:00</span><span>12:00</span>
+                                   <span>13:00</span><span>14:00</span><span>15:00</span>
+                                   <span>16:00</span><span>17:00</span><span>18:00</span>
+                                   <span>19:00</span><span>20:00</span><span>21:00</span>
+                                   <span>22:00</span>
+                               </div>
+                               <div class="day-column" data-day="monday"></div>
+                               <div class="day-column" data-day="tuesday"></div>
+                               <div class="day-column" data-day="wednesday"></div>
+                               <div class="day-column" data-day="thursday"></div>
+                               <div class="day-column" data-day="friday"></div>
+                               <div class="day-column" data-day="saturday"></div>
+                               <div class="day-column" data-day="sunday"></div>
+                           </div>
+                        </div>
+                    </div>
+                    
+                    <div id="announcements-view" class="tab-content hidden">
+                        <h3  style="margin-bottom: 12px;">Thông báo mới nhất</h3>
+                        <div id="announcements-list">
+                            </div>
+                    </div>
+                </section>
+                
+                <section id="my-classes" class="content-section">
+                    <div id="class-list-view">
+                        <h2>Các Lớp đang theo học</h2>
+                        <div class="card-container" id="student-class-cards">
+                            </div>
+                    </div>
+
+<div id="class-detail-view" style="display: none;">
+    <button id="back-to-class-list" class="btn btn-secondary"><i class="fas fa-arrow-left"></i> Quay lại danh sách</button>
+    <h2 style="margin-top: 20px;">Chi tiết lớp học: <span id="student-class-detail-title"></span></h2>
+    
+    <div class="tabs">
+        <button class="tab-item active" data-tab="my-grades"><i class="fas fa-award"></i> Điểm số</button>
+        <button class="tab-item" data-tab="my-attendance"><i class="fas fa-check-circle"></i> Điểm danh</button>
+        <button class="tab-item" data-tab="my-assignments"><i class="fas fa-tasks"></i> Bài tập</button> 
+    </div>
+    
+    <div class="tab-content-container">
+        <div id="my-grades" class="tab-content active">
+            <h3>Bảng điểm cá nhân</h3>
+            <div class="table-container">
+                <table id="my-grades-table">
+                    <thead><tr><th>Bài tập</th><th>Điểm số</th><th>Tỷ trọng</th></tr></thead>
+                    <tbody id="my-grades-table-body"></tbody>
+                    <tfoot><tr><th>Điểm trung bình (Dự kiến)</th><th colspan="2" id="final-gpa"></th></tr></tfoot>
+                </table>
+            </div>
+        </div>
+        <div id="my-attendance" class="tab-content hidden">
+            <h3>Lịch sử điểm danh</h3>
+            <div class="table-container">
+                <table id="my-attendance-table">
+                    <thead><tr><th>Buổi học</th><th>Ngày học</th><th>Trạng thái</th></tr></thead>
+                    <tbody id="my-attendance-table-body"></tbody>
+                </table>
+            </div>
+        </div>
+        
+        <div id="my-assignments" class="tab-content hidden"> 
+            <h3>Bài tập & Dự án</h3>
+            <div id="assignment-list-container">
+                </div>
+        </div>
+        
+    </div>
+</div>
+                </section>
+
+                <section id="submit-feedback" class="content-section">
+                    <h2>Gửi Phản hồi & Góp ý</h2>
+
+                    <div class="form-box card" style="margin-bottom: 30px;">
+                        <h3><i class="fa-solid fa-paper-plane"></i> Gửi Góp ý/Đánh giá mới</h3>
+                        <form id="student-feedback-form">
+                            
+                            <!-- 🚨 Đã loại bỏ phần chọn lớp và mức độ hài lòng -->
+                            <div class="form-group">
+                                <label for="feedback-title-input">Tiêu đề Góp ý:</label>
+                                <input type="text" id="feedback-title-input" name="title" class="form-control" placeholder="Tóm tắt góp ý của bạn" required>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="feedback-detail-content">Nội dung chi tiết (Góp ý/Lý do):</label>
+                                <textarea id="feedback-detail-content" name="content" rows="4" class="form-control" placeholder="Vui lòng nhập chi tiết phản hồi của bạn..." required style="resize: none;"></textarea>
+                            </div>
+
+                            <button id="submit-student-feedback-btn" type="submit" class="btn btn-primary" style="margin-top: 15px;">
+                                Gửi phản hồi
+                            </button>
+                        </form>
+                    </div>
+
+                    <div class="card" style="margin-bottom: 20px; padding: 20px;">
+                        <h3>Lịch sử Phản hồi đã gửi</h3>
+                        <div class="form-grid" id="feedback-history-filters">
+                            <div class="form-group">
+                                <label for="history-search">Tìm kiếm (Tiêu đề/Trạng thái):</label>
+                                <input type="text" id="history-search" class="form-control" placeholder="Tìm kiếm theo tiêu đề...">
+                            </div>
+
+                            <div class="form-group">
+                                <label for="history-filter-status">Lọc theo Trạng thái:</label>
+                                <select id="history-filter-status" class="form-control">
+                                    <option value="all">-- Tất cả Trạng thái --</option>
+                                    <option value="pending">Chờ xử lý</option>
+                                    <option value="resolved">Đã xử lý</option>
+                                    </select>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="history-sort-date">Sắp xếp theo Ngày:</label>
+                                <select id="history-sort-date" class="form-control">
+                                    <option value="newest">Mới nhất</option>
+                                    <option value="oldest">Cũ nhất</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="table-container">
+                        <table id="feedback-history-table">
+                            <thead>
+                                <tr>
+                                    <th>Tiêu đề</th>
+                                    <th>Nội dung (Tóm tắt)</th>
+                                    <th>Ngày gửi</th>
+                                    <th>Trạng thái</th>
+                                </tr>
+                            </thead>
+                            <tbody id="feedback-history-table-body">
+                                </tbody>
+                        </table>
+                    </div>
+                </section>
+            </div>
+        </main>
+    </div>
+
+<!-- MODAL NỘP BÀI TẬP -->
+<div id="submission-modal-overlay" class="modal-overlay hidden">
+        <div class="modal" style="max-width: 600px;">
+            <div class="modal-header">
+                <h3 id="submission-modal-title">Nộp bài tập: <span id="submission-assignment-title"></span></h3>
+                <span id="close-submission-modal-btn" class="close-modal">&times;</span>
+            </div>
+            <div class="modal-body">
+                <p>Hạn chót: <span id="submission-due-date" style="font-weight: bold;">N/A</span></p>
+                <div id="current-submission-info" style="margin-bottom: 15px; padding: 10px; border: 1px dashed #ccc; border-radius: 5px;">
+                    <!-- Thông tin nộp bài hiện tại -->
+                </div>
+
+                <form id="assignment-submission-form">
+                    <input type="hidden" id="submission-assignment-id" name="assignment_id">
+
+                    <div class="form-group">
+                        <label for="submission-file">Chọn File Nộp Bài (Bắt buộc):</label>
+                        <input type="file" id="submission-file" name="file" class="form-control" required>
+                    </div>
+
+                    <!-- <div class="form-group">
+                        <label for="submission-note">Ghi chú (Tùy chọn):</label>
+                        <textarea id="submission-note" name="note" rows="2" class="form-control" placeholder="Ghi chú về bài nộp..."></textarea>
+                    </div> -->
+
+                    <div class="modal-footer" style="padding: 0; margin-top: 20px;">
+                        <button id="cancel-submission-btn" type="button" class="btn btn-secondary">Hủy</button>
+                        <button id="submit-assignment-btn" type="submit" class="btn btn-primary">Nộp bài</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    
+    <div id="profile-modal-overlay" class="modal-overlay hidden">
+        <div class="modal" style="max-width: 500px;">
+            <div class="modal-header">
+                <h3 id="profile-modal-title">Thông tin Tài khoản</h3>
+                <span id="close-profile-modal-btn" class="close-modal">&times;</span>
+            </div>
+            <div class="modal-body">
+                
+                <div id="profile-info-display">
+                    <p><strong>Tên đăng nhập:</strong> <span id="profile-username"></span></p>
+                    <p><strong>Email:</strong> <span id="profile-email"></span></p>
+                </div>
+                
+                <div id="profile-edit-form" class="hidden">
+                    <div class="form-group">
+                        <label for="edit-username">Tên đăng nhập mới:</label>
+                        <input type="text" id="edit-username" class="form-control" disabled> 
+                    </div>
+                    <div class="form-group">
+                        <label for="edit-email">Email:</label>
+                        <input type="email" id="edit-email" class="form-control" disabled readonly>
+                    </div>
+                    
+                    <hr style="margin: 20px 0;">
+                    
+                    <div class="form-group">
+                        <label for="new-password">Mật khẩu mới:</label>
+                        <input type="password" id="new-password" class="form-control" placeholder="Để trống nếu không muốn đổi mật khẩu">
+                    </div>
+                    <div class="form-group">
+                        <label for="current-password">Mật khẩu hiện tại (BẮT BUỘC để lưu thay đổi):</label>
+                        <input type="password" id="current-password" class="form-control" placeholder="Nhập mật khẩu hiện tại" required>
+                    </div>
+                    <p class="text-danger hidden" id="password-error" style="color: red; font-size: 0.9em;">Mật khẩu không đúng.</p>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button id="cancel-profile-btn" class="btn btn-secondary">Đóng</button>
+                <!-- <button id="toggle-edit-profile-btn" class="btn btn-warning">Thay đổi thông tin</button>
+                <button id="save-profile-btn" class="btn btn-primary hidden">Lưu thay đổi</button> -->
+            </div>
+        </div>
+    </div>
+
+    <script src="/app/static/js/common.js"></script>
+    <script src="/app/static/js/student.js"></script>
+</body>
+</html>
